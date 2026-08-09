@@ -429,41 +429,6 @@ main {
   color: var(--color-text);
 }
 
-.glossary-toc {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.glossary-toc a {
-  font-size: 0.82rem;
-  color: var(--color-text);
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  white-space: nowrap;
-}
-
-.glossary-toc a:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-.glossary-toc a .mono {
-  color: var(--color-faint);
-  margin-right: 0.35rem;
-}
-
-.glossary-category {
-  margin-bottom: 2.75rem;
-  scroll-margin-top: 5rem;
-}
-
 .cat-head {
   display: flex;
   align-items: baseline;
@@ -482,6 +447,7 @@ main {
   flex: none;
 }
 
+.cat-head h1,
 .cat-head h2 {
   font-size: 1.15rem;
   margin: 0;
@@ -560,6 +526,55 @@ main {
 
 .callout li:last-child {
   margin-bottom: 0;
+}
+
+.card .cat-range {
+  display: inline-block;
+  margin-bottom: 0.7rem;
+}
+
+.card .term-count {
+  display: block;
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.back-link:hover {
+  color: var(--color-primary);
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.pager a {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+  max-width: 45%;
+}
+
+.pager-next {
+  text-align: right;
+}
+
+.pager a:hover {
+  color: var(--color-primary);
 }
 
 @media (max-width: 480px) {

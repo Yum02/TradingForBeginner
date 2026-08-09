@@ -1,0 +1,63 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { glossaryCategories, type GlossaryCategory } from "../../data/glossary";
+
+export function getStaticPaths() {
+  return glossaryCategories.map((category, i) => ({
+    params: { slug: category.slug },
+    props: {
+      category,
+      prev: glossaryCategories[i - 1] ?? null,
+      next: glossaryCategories[i + 1] ?? null,
+    },
+  }));
+}
+
+interface Props {
+  category: GlossaryCategory;
+  prev: GlossaryCategory | null;
+  next: GlossaryCategory | null;
+}
+
+const { category, prev, next } = Astro.props;
+---
+
+<Layout
+  title={category.title}
+  description={`${category.title} 관련 주식 기초 용어 ${category.terms.length}개. ${category.criterion}`}
+>
+  <a class="back-link" href="/concepts">← 기본 개념 전체보기</a>
+
+  <div class="page-header">
+    <div class="cat-head">
+      <span class="cat-range mono">{category.range}</span>
+      <h1>{category.title}</h1>
+    </div>
+    <p class="cat-criterion">{category.criterion}</p>
+  </div>
+
+  <div class="term-list">
+    {category.terms.map((t) => (
+      <div class="term">
+        <div class="num mono">{t.num}</div>
+        <div>
+          <p class="name">{t.name}</p>
+          <p class="def">{t.def}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <nav class="pager">
+    {prev ? (
+      <a class="pager-prev" href={`/concepts/${prev.slug}`}>← {prev.title}</a>
+    ) : (
+      <span />
+    )}
+    {next ? (
+      <a class="pager-next" href={`/concepts/${next.slug}`}>{next.title} →</a>
+    ) : (
+      <span />
+    )}
+  </nav>
+</Layout>

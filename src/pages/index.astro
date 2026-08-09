@@ -8,6 +8,7 @@ const sections = [
     desc: "주식이 무엇인지부터 매수·매도, 시가총액, 배당 같은 필수 용어까지 차근차근 정리합니다.",
     badge: "준비 중",
     ready: false,
+    icon: `<path d="M4 5.5C4 4.67 4.67 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H13v16h5.5c.83 0 1.5-.67 1.5-1.5v-13Z"/>`,
   },
   {
     href: "/domestic",
@@ -15,6 +16,7 @@ const sections = [
     desc: "코스피·코스닥 현황과 국내 주요 지표를 쉽게 풀어서 설명합니다.",
     badge: "준비 중",
     ready: false,
+    icon: `<rect x="4" y="12" width="3.2" height="8"/><rect x="10.4" y="6" width="3.2" height="14"/><rect x="16.8" y="9" width="3.2" height="11"/>`,
   },
   {
     href: "/us",
@@ -22,31 +24,48 @@ const sections = [
     desc: "S&P 500, 나스닥 등 미국 시장 현황과 대표 지수를 소개합니다.",
     badge: "준비 중",
     ready: false,
+    icon: `<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5c2.2 2.3 3.4 5.3 3.4 8.5s-1.2 6.2-3.4 8.5M12 3.5c-2.2 2.3-3.4 5.3-3.4 8.5s1.2 6.2 3.4 8.5M4 12h16" stroke="currentColor" stroke-width="1.4" fill="none"/>`,
   },
 ];
 ---
 
 <Layout title="홈">
   <section class="hero">
+    <span class="eyebrow">주식 첫걸음 · 초보자를 위한 사이트</span>
     <h1>주식, 아무것도 몰라도 여기서부터 시작하세요</h1>
     <p>
       복잡한 용어와 숫자에 겁먹지 않도록, 주식의 기본 개념부터 국내·미국 시장까지
       하나씩 천천히 다룰 예정입니다.
     </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/concepts">기초 용어 보러가기 →</a>
+      <a class="btn btn-ghost" href="#roadmap">진행 로드맵 보기</a>
+    </div>
   </section>
+
+  <div class="stat-bar">
+    <div class="stat"><span class="num">108</span><span class="label">정리된 기초 용어</span></div>
+    <div class="stat"><span class="num">13</span><span class="label">용어 주제 영역</span></div>
+    <div class="stat"><span class="num">3</span><span class="label">단계별 학습 트랙</span></div>
+  </div>
+
+  <div class="section-heading" id="roadmap">
+    <h2>어디서부터 볼까요</h2>
+    <p>개념 → 국내 주식 → 미국 주식 순서로 콘텐츠를 하나씩 추가하고 있습니다.</p>
+  </div>
 
   <div class="card-grid">
     {sections.map((s) => (
       <a class="card" href={s.href}>
+        <span class="card-icon" set:html={`<svg viewBox="0 0 24 24" fill="currentColor">${s.icon}</svg>`} />
         <span class={`badge ${s.ready ? "" : "soon"}`}>{s.badge}</span>
-        <h2>{s.title}</h2>
+        <h3>{s.title}</h3>
         <p>{s.desc}</p>
       </a>
     ))}
   </div>
 
   <p class="notice">
-    이 사이트는 한 번에 모든 기능을 만들지 않고, 개념 → 국내 주식 → 미국 주식 순서로
-    콘텐츠를 하나씩 추가해 나갈 예정입니다.
+    이 사이트는 한 번에 모든 기능을 만들지 않고, 위 순서대로 콘텐츠를 하나씩 추가해 나갈 예정입니다.
   </p>
 </Layout>

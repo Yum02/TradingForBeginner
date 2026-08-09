@@ -11,7 +11,15 @@ const navItems = [
 
 <header class="site-header">
   <div class="container">
-    <a href="/" class="logo">주식 첫걸음</a>
+    <a href="/" class="logo">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 17l5-5 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 7h5v5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      주식 첫걸음
+    </a>
     <nav class="main-nav">
       {navItems.map((item) => (
         <a

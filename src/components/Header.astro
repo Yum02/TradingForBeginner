@@ -1,0 +1,26 @@
+---
+const { pathname } = Astro.url;
+
+const navItems = [
+  { href: "/", label: "홈" },
+  { href: "/concepts", label: "기본 개념" },
+  { href: "/domestic", label: "국내 주식" },
+  { href: "/us", label: "미국 주식" },
+];
+---
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="logo">주식 첫걸음</a>
+    <nav class="main-nav">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)) ? "active" : ""}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</header>

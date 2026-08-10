@@ -38,8 +38,9 @@ const { window: period, stocks, all } = top10;
   </details>
 
   <p class="notice">
-    출처: 네이버 금융 일별 시세 · 집계 기간 {formatDate(period.from)} ~ {formatDate(period.to)}
-    ({period.tradingDays}영업일) · 거래대금은 일별 <strong>종가 × 거래량</strong>으로 계산한 추정치입니다 ·
+    출처: <strong>한국거래소(KRX) OPEN API</strong> · 집계 기간 {formatDate(period.from)} ~ {formatDate(period.to)}
+    ({period.tradingDays}영업일) · 거래량·거래대금 모두 거래소가 공시한 실제 집계값입니다 ·
+    거래소는 당일 자료를 하루 뒤에 공개하므로 기준일이 오늘보다 앞설 수 있습니다 ·
     이 자료는 정보 제공용이며 투자 권유가 아닙니다.
   </p>
 </Layout>

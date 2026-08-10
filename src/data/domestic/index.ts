@@ -12,7 +12,7 @@ export interface VolumeRow {
   kind: Kind;
   /** 기간 내 일별 거래량 합계 (주) — 정확값 */
   volume: number;
-  /** 기간 내 Σ(종가 × 거래량) (원) — 종가 기준 추정값 */
+  /** 기간 내 거래대금 합계 (원) — 거래소가 공시한 실제 집계값 */
   value: number;
   /** 기간 마지막 영업일 종가 (원) */
   lastClose: number;

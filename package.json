@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "collect:domestic": "node scripts/collect-domestic.ts"
+    "collect:domestic": "node --env-file-if-exists=.env scripts/collect-domestic.ts"
   },
   "dependencies": {
     "astro": "^7.2.0"

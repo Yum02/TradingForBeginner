@@ -1,0 +1,46 @@
+---
+import { formatVolume, formatValue, formatPrice, exact, type VolumeRow } from "../data/domestic";
+
+interface Props {
+  rows: VolumeRow[];
+  /** ETF·ETN이 섞인 목록에서만 구분 열을 보여준다. */
+  showKind?: boolean;
+}
+
+const { rows, showKind = false } = Astro.props;
+---
+
+<div class="table-wrap">
+  <table class="rank-table">
+    <thead>
+      <tr>
+        <th scope="col" class="col-rank">순위</th>
+        <th scope="col">종목명</th>
+        <th scope="col">시장</th>
+        {showKind && <th scope="col">구분</th>}
+        <th scope="col" class="col-num">누적 거래량 (주)</th>
+        <th scope="col" class="col-num">누적 거래대금 (원)</th>
+        <th scope="col" class="col-num">기준일 종가 (원)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          <td class={`rank-num${row.rank <= 3 ? " top" : ""}`}>{row.rank}</td>
+          <th scope="row" class="col-name">{row.name}</th>
+          <td>
+            <span class={`mkt-badge ${row.market === "KOSPI" ? "kospi" : "kosdaq"}`}>
+              {row.market === "KOSPI" ? "코스피" : "코스닥"}
+            </span>
+          </td>
+          {showKind && (
+            <td><span class="kind-badge">{row.kind}</span></td>
+          )}
+          <td class="col-num mono" title={exact(row.volume, "주")}>{formatVolume(row.volume)}</td>
+          <td class="col-num mono" title={exact(row.value, "원")}>{formatValue(row.value)}</td>
+          <td class="col-num mono" title={exact(row.lastClose, "원")}>{formatPrice(row.lastClose)}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,191 @@
+---
+/**
+ * 일봉 차트 — 캔들 + 5일 이동평균선 + 거래량.
+ *
+ * 네이버 증권·토스증권의 종목 차트 구성을 따랐다. 국내 주식 입문 자료가 공통으로
+ * 꼽는 "차트 3요소(캔들·이동평균선·거래량)"가 그대로 증권사 기본 화면이기도 해서,
+ * 여기서 익힌 그림이 나중에 실제 증권사 앱에서 그대로 통하게 하려는 의도다.
+ *
+ * 사이트 전체가 자바스크립트 0줄이므로 차트 라이브러리를 쓰지 않고 빌드 타임에
+ * SVG를 직접 그린다. 십자선·툴팁은 JS가 필요하니, 대신 캔들마다 <title>을 넣어
+ * 브라우저 기본 툴팁으로 시·고·저·종을 보여준다.
+ */
+import { shortDate, formatSignedPercent, type StockSeries } from "../data/domestic";
+
+interface Props {
+  series: StockSeries;
+  /** 기간 내 영업일 달력. 거래정지로 빠진 날이 있어도 x축이 밀리지 않게 한다. */
+  dates: string[];
+}
+
+const { series, dates } = Astro.props;
+const bars = series.days;
+
+// ── 좌표계 ────────────────────────────────────────────────────────────────
+const W = 760;
+const PAD_L = 8;
+// 오른쪽 가격 눈금 자리 (네이버처럼 눈금을 오른쪽에 둔다).
+// 좁은 화면에서는 글자를 키우므로 "300,000" 일곱 글자가 들어갈 만큼 넉넉히 잡는다.
+const PAD_R = 96;
+const PRICE_TOP = 16;
+const PRICE_H = 234;
+const VOL_TOP = 284;
+const VOL_H = 66;
+const AXIS_Y = 368;
+
+const plotW = W - PAD_L - PAD_R;
+const slot = plotW / Math.max(dates.length, 1);
+const bodyW = Math.min(slot * 0.62, 14);
+const xAt = (i: number) => PAD_L + slot * (i + 0.5);
+
+// ── 가격 축 ───────────────────────────────────────────────────────────────
+// 종가가 아니라 고가·저가까지 담아야 꼬리가 잘리지 않는다.
+const hi = Math.max(...bars.map((b) => b.high));
+const lo = Math.min(...bars.map((b) => b.low));
+// 한 달 내내 값이 같은 종목이면 span이 0이 되어 0으로 나눈다. 반드시 막는다.
+const span = hi - lo || Math.max(hi * 0.02, 1);
+const top = hi + span * 0.06;
+const bot = lo - span * 0.06;
+const yAt = (v: number) => PRICE_TOP + ((top - v) / (top - bot)) * PRICE_H;
+
+/**
+ * 눈금이 238,742 같은 숫자로 찍히지 않도록 1·2·2.5·5·10 배수로 떨어뜨린다.
+ * 큰 쪽으로 올림하면(예: 2.1 → 5) 눈금이 두 줄로 줄어 차트가 성기게 보여서,
+ * 사다리에서 가장 가까운 값을 고른다.
+ */
+function niceStep(range: number, ticks: number): number {
+  const rough = range / ticks;
+  const mag = 10 ** Math.floor(Math.log10(rough));
+  const norm = rough / mag;
+  const ladder = [1, 2, 2.5, 5, 10];
+  const mult = ladder.reduce((best, c) => (Math.abs(c - norm) < Math.abs(best - norm) ? c : best));
+  return mult * mag;
+}
+const step = niceStep(top - bot, 4);
+const gridValues: number[] = [];
+for (let v = Math.ceil(bot / step) * step; v <= top; v += step) gridValues.push(v);
+
+// ── 거래량 축 ─────────────────────────────────────────────────────────────
+const volMax = Math.max(...bars.map((b) => b.volume)) || 1;
+const volH = (v: number) => Math.max((v / volMax) * VOL_H, 1);
+
+// ── 5일 이동평균선 ────────────────────────────────────────────────────────
+// 1개월치(약 21영업일)뿐이라 20일선은 점이 몇 개 안 나오고 60·120일선은 아예
+// 불가능하다. 없는 걸 그리느니 5일선 하나만 정확히 그린다.
+const MA_DAYS = 5;
+const slotIndex = new Map(dates.map((d, i) => [d, i]));
+const maPoints = bars
+  .map((bar, i) => {
+    if (i < MA_DAYS - 1) return null;
+    let sum = 0;
+    for (let k = i - MA_DAYS + 1; k <= i; k++) sum += bars[k].close;
+    return { x: xAt(slotIndex.get(bar.date) ?? i), y: yAt(sum / MA_DAYS) };
+  })
+  .filter((p): p is { x: number; y: number } => p !== null);
+const maPath = maPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+// ── 캔들 ──────────────────────────────────────────────────────────────────
+const candles = bars.map((bar, i) => {
+  const x = xAt(slotIndex.get(bar.date) ?? i);
+  const dir = bar.close > bar.open ? "up" : bar.close < bar.open ? "down" : "flat";
+  const bodyTop = yAt(Math.max(bar.open, bar.close));
+  // 저가주는 하루 변동폭이 1~2원이라 몸통 높이가 0px이 될 수 있다. 최소 1px 보장.
+  const bodyH = Math.max(yAt(Math.min(bar.open, bar.close)) - bodyTop, 1);
+  const n = (v: number) => v.toLocaleString("ko-KR");
+  return {
+    x,
+    dir,
+    bodyTop,
+    bodyH,
+    wickTop: yAt(bar.high),
+    wickBottom: yAt(bar.low),
+    volTop: VOL_TOP + VOL_H - volH(bar.volume),
+    volH: volH(bar.volume),
+    label:
+      `${shortDate(bar.date)} · 시 ${n(bar.open)} 고 ${n(bar.high)} 저 ${n(bar.low)} 종 ${n(bar.close)}` +
+      ` (${formatSignedPercent(bar.changeRate)}) · 거래량 ${n(bar.volume)}주`,
+  };
+});
+
+// ── x축 날짜 ──────────────────────────────────────────────────────────────
+// 21개를 다 찍으면 글자가 겹친다. 처음·끝 포함 5개만 고른다.
+// 양 끝은 가운데 정렬하면 차트 밖으로 삐져나가므로 안쪽으로 붙여 정렬한다.
+const TICKS = 5;
+const xLabels = Array.from({ length: TICKS }, (_, k) => {
+  const i = Math.round((k * (dates.length - 1)) / (TICKS - 1));
+  if (k === 0) return { x: PAD_L, anchor: "start", text: shortDate(dates[i]) };
+  if (k === TICKS - 1) return { x: W - PAD_R, anchor: "end", text: shortDate(dates[i]) };
+  return { x: xAt(i), anchor: "mid", text: shortDate(dates[i]) };
+});
+
+const last = bars[bars.length - 1];
+const lastDir = last.change > 0 ? "up" : last.change < 0 ? "down" : "flat";
+
+/**
+ * 기준일 종가 배지가 눈금 라벨 위에 겹쳐 앉는 경우가 있다. 겹치는 라벨은 숨기되
+ * 배지를 감추는 좁은 화면에서는 다시 보여야 하므로, 지우지 않고 표시만 CSS로 끈다.
+ */
+const overlapsBadge = (v: number) => Math.abs(yAt(v) - yAt(last.close)) < 12;
+const first = bars[0];
+const periodRate = first.close === 0 ? 0 : ((last.close - first.close) / first.close) * 100;
+const summary =
+  `${series.name} 최근 ${bars.length}영업일 주가 차트. ` +
+  `${first.close.toLocaleString("ko-KR")}원에서 시작해 ${last.close.toLocaleString("ko-KR")}원으로 마감, ` +
+  `기간 ${formatSignedPercent(periodRate)}. 최고 ${hi.toLocaleString("ko-KR")}원, 최저 ${lo.toLocaleString("ko-KR")}원.`;
+---
+
+<div class="chart-card">
+  <svg class="price-chart" viewBox={`0 0 ${W} 380`} role="img" aria-label={summary}>
+    <title>{series.name} 일봉 차트</title>
+    <desc>{summary}</desc>
+
+    {/* 가로 격자 + 오른쪽 가격 눈금 */}
+    {gridValues.map((v) => (
+      <g>
+        <line class="grid-line" x1={PAD_L} y1={yAt(v).toFixed(1)} x2={W - PAD_R} y2={yAt(v).toFixed(1)} />
+        <text class={`axis-label${overlapsBadge(v) ? " behind-badge" : ""}`} x={W - PAD_R + 6} y={(yAt(v) + 3.5).toFixed(1)}>
+          {v.toLocaleString("ko-KR")}
+        </text>
+      </g>
+    ))}
+
+    {/* 기준일 종가 기준선 — 지금 가격이 기간 어디쯤인지 한눈에 보이게 */}
+    <line class="last-line" x1={PAD_L} y1={yAt(last.close).toFixed(1)} x2={W - PAD_R} y2={yAt(last.close).toFixed(1)} />
+    <rect class={`last-badge ${lastDir}`} x={W - PAD_R + 3} y={(yAt(last.close) - 9).toFixed(1)} width="66" height="18" rx="4" />
+    <text class="last-badge-text" x={W - PAD_R + 36} y={(yAt(last.close) + 4).toFixed(1)}>
+      {last.close.toLocaleString("ko-KR")}
+    </text>
+
+    {/* 5일 이동평균선 — 캔들보다 아래에 깔아 캔들을 가리지 않게 한다 */}
+    {maPoints.length > 1 && <path class="ma-line" d={maPath} />}
+
+    {/* 캔들 + 거래량 막대 (같은 x, 같은 색) */}
+    {candles.map((c) => (
+      <g class={`candle ${c.dir}`}>
+        <title>{c.label}</title>
+        <line class="wick" x1={c.x.toFixed(1)} y1={c.wickTop.toFixed(1)} x2={c.x.toFixed(1)} y2={c.wickBottom.toFixed(1)} />
+        <rect class="body" x={(c.x - bodyW / 2).toFixed(1)} y={c.bodyTop.toFixed(1)} width={bodyW.toFixed(1)} height={c.bodyH.toFixed(1)} />
+        <rect class="vol-bar" x={(c.x - bodyW / 2).toFixed(1)} y={c.volTop.toFixed(1)} width={bodyW.toFixed(1)} height={c.volH.toFixed(1)} />
+      </g>
+    ))}
+
+    <text class="axis-label section" x={PAD_L} y={VOL_TOP - 8}>거래량</text>
+    <line class="grid-line" x1={PAD_L} y1={VOL_TOP + VOL_H} x2={W - PAD_R} y2={VOL_TOP + VOL_H} />
+
+    {xLabels.map((t) => (
+      <text class={`axis-label ${t.anchor}`} x={t.x.toFixed(1)} y={AXIS_Y}>{t.text}</text>
+    ))}
+  </svg>
+</div>
+
+<p class="chart-legend">
+  <span class="lg up">■</span> 오른 날(양봉)
+  <span class="lg down">■</span> 내린 날(음봉)
+  <span class="sep">·</span> 위아래 선은 그날의 <strong>고가·저가</strong>
+  <span class="sep">·</span> <span class="lg ma">━</span> 5일 평균 종가
+  <span class="sep">·</span> 아래 막대는 <strong>거래량</strong>
+</p>
+<p class="chart-note">
+  국내는 오르면 빨강, 내리면 파랑입니다. 미국 사이트는 반대로 오르면 초록이니 헷갈리지 마세요.
+  캔들에 마우스를 올리면 그날의 시가·고가·저가·종가가 나옵니다.
+</p>

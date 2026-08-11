@@ -1,5 +1,5 @@
 ---
-import { formatVolume, formatValue, formatPrice, exact, type VolumeRow } from "../data/domestic";
+import { formatVolume, formatValue, formatPrice, exact, hasDetailPage, type VolumeRow } from "../data/domestic";
 
 interface Props {
   rows: VolumeRow[];
@@ -27,7 +27,13 @@ const { rows, showKind = false } = Astro.props;
       {rows.map((row) => (
         <tr>
           <td class={`rank-num${row.rank <= 3 ? " top" : ""}`}>{row.rank}</td>
-          <th scope="row" class="col-name">{row.name}</th>
+          <th scope="row" class="col-name">
+            {hasDetailPage(row.code) ? (
+              <a class="row-link" href={`/domestic/${row.code}`}>{row.name}<span class="chev" aria-hidden="true">›</span></a>
+            ) : (
+              row.name
+            )}
+          </th>
           <td>
             <span class={`mkt-badge ${row.market === "KOSPI" ? "kospi" : "kosdaq"}`}>
               {row.market === "KOSPI" ? "코스피" : "코스닥"}

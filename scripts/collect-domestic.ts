@@ -2,7 +2,11 @@
  * 국내 주식 — 최근 1개월 누적 거래량 TOP10 수집기 (KRX Open API)
  *
  *   실행: npm run collect:domestic
- *   결과: src/data/domestic/top10.json  (git에 커밋됨)
+ *   결과: src/data/domestic/top10.json  (순위표)      ← 둘 다 git에 커밋됨
+ *         src/data/domestic/daily.json  (종목 상세용 일별 시세)
+ *
+ * 두 파일은 반드시 같은 실행에서 함께 갱신된다. 순위표에만 있고 시계열에는 없는
+ * 종목이 생기면 상세 페이지 링크가 깨지기 때문이다.
  *
  * 이 스크립트는 로컬에서 수동으로만 실행한다. 사이트 빌드는 이 스크립트를 호출하지
  * 않으며 커밋된 JSON만 읽는다. 덕분에 Cloudflare 배포가 외부 API 상태와 무관하다.
@@ -28,6 +32,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_FILE = path.join(ROOT, "src", "data", "domestic", "top10.json");
+const DAILY_FILE = path.join(ROOT, "src", "data", "domestic", "daily.json");
 const CACHE_DIR = path.join(ROOT, ".cache");
 
 const API_BASE = "https://data-dbg.krx.co.kr/svc/apis";
@@ -71,8 +76,36 @@ interface KrxRow {
   ISU_NM?: string;
   MKT_NM?: string;
   TDD_CLSPRC?: string;
+  TDD_OPNPRC?: string;
+  TDD_HGPRC?: string;
+  TDD_LWPRC?: string;
+  CMPPREVDD_PRC?: string;
+  FLUC_RT?: string;
   ACC_TRDVOL?: string;
   ACC_TRDVAL?: string;
+}
+
+/** 하루치 시세 한 줄 — 상세 페이지의 캔들 하나에 대응한다. */
+interface DayBar {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  /** 전일 대비 등락폭·등락률. 직접 계산하지 않고 거래소가 준 값을 그대로 쓴다. */
+  change: number;
+  changeRate: number;
+  volume: number;
+  value: number;
+}
+
+/** daily.json에 실리는 종목 한 개 — 기본 정보 + 기간 내 일별 시세 */
+interface StockSeries {
+  code: string;
+  name: string;
+  market: Market;
+  kind: Kind;
+  days: DayBar[];
 }
 
 interface Top10Row {
@@ -97,12 +130,19 @@ interface Aggregate {
   lastDate: string;
 }
 
-/** 캐시: 기간이 바뀌면 파일명이 달라져 자동으로 미스가 난다. */
+/**
+ * 캐시: 기간이 바뀌면 파일명이 달라져 자동으로 미스가 난다.
+ * 파일명의 v2는 스키마 버전이다. series가 없던 v1 캐시를 재사용하지 않으려고 올렸다.
+ */
 interface CacheFile {
   window: { from: string; to: string };
   rows: Record<string, Aggregate>;
+  /** 종목코드 → 일별 시세. 병렬 수집이라 날짜 순서가 섞여 있으므로 쓸 때 정렬한다. */
+  series: Record<string, DayBar[]>;
   dates: string[];
 }
+
+const CACHE_VERSION = "v2";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -189,13 +229,24 @@ async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<v
   );
 }
 
+const cachePath = (from: string, to: string) =>
+  path.join(CACHE_DIR, `krx-daily-${CACHE_VERSION}-${from}-${to}.json`);
+
 async function readCache(from: string, to: string): Promise<CacheFile | null> {
   try {
-    const raw = await readFile(path.join(CACHE_DIR, `krx-daily-${from}-${to}.json`), "utf8");
+    const raw = await readFile(cachePath(from, to), "utf8");
     return JSON.parse(raw) as CacheFile;
   } catch {
     return null;
   }
+}
+
+/** 임시 파일에 쓰고 rename — 도중에 죽어도 기존 파일이 반쯤 덮여 깨지지 않는다. */
+async function writeJson(file: string, data: unknown): Promise<void> {
+  await mkdir(path.dirname(file), { recursive: true });
+  const tmp = `${file}.tmp`;
+  await writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  await rename(tmp, file);
 }
 
 function toTop10(rows: Aggregate[]): Top10Row[] {
@@ -242,6 +293,7 @@ async function main(): Promise<void> {
     console.log(`수집 중... (${days.length}일 × ${SOURCES.length}개 서비스 = ${jobs.length}요청)`);
 
     const rows: Record<string, Aggregate> = {};
+    const series: Record<string, DayBar[]> = {};
     const dates = new Set<string>();
     let done = 0;
 
@@ -260,6 +312,24 @@ async function main(): Promise<void> {
         // 휴장일 껍데기 행은 통째로 건너뛴다.
         if (volume === 0 && value === 0 && close === 0) continue;
         const market: Market = source.market ?? (row.MKT_NM === "KOSDAQ" ? "KOSDAQ" : "KOSPI");
+
+        // 거래정지 종목은 종가만 있고 시·고·저가 칸이 비어 있을 수 있다. 그럴 때는
+        // 종가로 채워 납작한 캔들이 되게 한다(0으로 두면 차트가 바닥까지 찌그러진다).
+        const open = num(row.TDD_OPNPRC) || close;
+        const high = Math.max(num(row.TDD_HGPRC) || close, open, close);
+        const low = Math.min(num(row.TDD_LWPRC) || close, open, close);
+        (series[code] ??= []).push({
+          date: day,
+          open,
+          high,
+          low,
+          close,
+          change: num(row.CMPPREVDD_PRC),
+          changeRate: num(row.FLUC_RT),
+          volume,
+          value,
+        });
+
         const prev = rows[code];
         if (prev) {
           prev.volume += volume;
@@ -286,9 +356,9 @@ async function main(): Promise<void> {
       if (done % 40 === 0) console.log(`  ${done}/${jobs.length}`);
     });
 
-    cache = { window: { from, to }, rows, dates: [...dates].sort() };
+    cache = { window: { from, to }, rows, series, dates: [...dates].sort() };
     await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(path.join(CACHE_DIR, `krx-daily-${from}-${to}.json`), JSON.stringify(cache), "utf8");
+    await writeFile(cachePath(from, to), JSON.stringify(cache), "utf8");
   }
 
   // 3. 집계
@@ -316,22 +386,39 @@ async function main(): Promise<void> {
   }
   assert(stocks.every((row) => row.kind === "주식"), "개별 종목 목록에 ETF·ETN이 섞였습니다.");
 
-  const payload = {
-    generatedAt: kstNowIso(),
-    window: {
-      from: sortedDates[0],
-      to: sortedDates[sortedDates.length - 1],
-      tradingDays: sortedDates.length,
-    },
-    stocks,
-    all,
-  };
+  // 5. 종목 상세 페이지용 일별 시세 — 두 순위표에 오른 종목만 추린다.
+  //    전 종목(4,000개 이상)을 내보내면 저장소가 불필요하게 커진다.
+  const detailCodes = [...new Set([...stocks, ...all].map((row) => row.code))];
+  const seriesOut: Record<string, StockSeries> = {};
+  for (const code of detailCodes) {
+    const agg = cache.rows[code];
+    assert(agg !== undefined, `${code}의 집계 결과를 찾지 못했습니다.`);
+    // 병렬로 모았기 때문에 날짜가 뒤섞여 있다. 차트가 시간순으로 그려지도록 정렬한다.
+    const days = (cache.series[code] ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    assert(days.length >= 5, `${agg.name}의 일별 시세가 ${days.length}일뿐입니다 (최근 1주일 표에 5일이 필요).`);
+    for (let i = 1; i < days.length; i++) {
+      assert(days[i - 1].date < days[i].date, `${agg.name}의 일별 시세에 날짜가 중복됐습니다.`);
+    }
+    for (const bar of days) {
+      assert(bar.close > 0, `${agg.name} ${bar.date}의 종가가 비어 있습니다.`);
+      assert(bar.low <= bar.close && bar.close <= bar.high, `${agg.name} ${bar.date}의 종가가 고저 범위를 벗어났습니다.`);
+    }
+    seriesOut[code] = { code, name: agg.name, market: agg.market, kind: agg.kind, days };
+  }
 
-  // 5. 원자적 교체 — 중간에 죽어도 기존 파일이 깨지지 않는다.
-  await mkdir(path.dirname(OUT_FILE), { recursive: true });
-  const tmp = `${OUT_FILE}.tmp`;
-  await writeFile(tmp, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  await rename(tmp, OUT_FILE);
+  const generatedAt = kstNowIso();
+  const period = {
+    from: sortedDates[0],
+    to: sortedDates[sortedDates.length - 1],
+    tradingDays: sortedDates.length,
+  };
+  const payload = { generatedAt, window: period, stocks, all };
+  const dailyPayload = { generatedAt, window: period, dates: sortedDates, series: seriesOut };
+
+  // 6. 원자적 교체 — 중간에 죽어도 기존 파일이 깨지지 않는다. 두 파일은 반드시
+  //    함께 갱신한다. 한쪽만 새것이면 상세 페이지 링크가 깨진다.
+  await writeJson(OUT_FILE, payload);
+  await writeJson(DAILY_FILE, dailyPayload);
 
   const 억 = (n: number) => `${(n / 1e8).toFixed(1)}억`;
   console.log(`\n기간: ${payload.window.from} ~ ${payload.window.to} (${payload.window.tradingDays}영업일)`);
@@ -340,11 +427,14 @@ async function main(): Promise<void> {
   for (const r of stocks) console.log(`  ${String(r.rank).padStart(2)} ${r.name.padEnd(20)} ${억(r.volume).padStart(10)}주  ${억(r.value).padStart(12)}원`);
   console.log("\nETF·ETN 포함 TOP10");
   for (const r of all) console.log(`  ${String(r.rank).padStart(2)} ${r.name.padEnd(20)} ${억(r.volume).padStart(10)}주  ${억(r.value).padStart(12)}원`);
-  console.log(`\n→ ${path.relative(ROOT, OUT_FILE)} 갱신 완료 (${((Date.now() - started) / 1000).toFixed(1)}초)`);
+  const barCount = Object.values(seriesOut).reduce((sum, s) => sum + s.days.length, 0);
+  console.log(`\n→ ${path.relative(ROOT, OUT_FILE)} 갱신 완료`);
+  console.log(`→ ${path.relative(ROOT, DAILY_FILE)} 갱신 완료 (${detailCodes.length}종목 · 일별 시세 ${barCount}건)`);
+  console.log(`\n소요 ${((Date.now() - started) / 1000).toFixed(1)}초`);
 }
 
 main().catch((err) => {
   console.error(`\n수집 실패: ${err instanceof Error ? err.message : String(err)}`);
-  console.error("기존 top10.json은 그대로 두었습니다.");
+  console.error("기존 top10.json·daily.json은 그대로 두었습니다.");
   process.exitCode = 1;
 });

@@ -11,6 +11,13 @@
   --color-primary-soft: rgba(28, 63, 115, 0.08);
   --color-accent: #0ea472;
   --color-accent-soft: rgba(14, 164, 114, 0.1);
+  /* 등락 — 국내 관행대로 오르면 빨강, 내리면 파랑 (미국은 반대) */
+  --color-up: #d92d20;
+  --color-up-soft: rgba(217, 45, 32, 0.1);
+  --color-down: #1570ef;
+  --color-down-soft: rgba(21, 112, 239, 0.1);
+  --color-flat: #8892a3;
+  --color-ma: #c2740a;
   --radius: 14px;
   --radius-sm: 9px;
   --max-width: 1040px;
@@ -32,6 +39,13 @@
     --color-primary-soft: rgba(111, 151, 224, 0.12);
     --color-accent: #35cf94;
     --color-accent-soft: rgba(53, 207, 148, 0.14);
+    /* 어두운 배경에서는 순빨강·순파랑이 눈에 부담이라 명도를 올려 쓴다 */
+    --color-up: #ff6b63;
+    --color-up-soft: rgba(255, 107, 99, 0.14);
+    --color-down: #55a6ff;
+    --color-down-soft: rgba(85, 166, 255, 0.14);
+    --color-flat: #6b7590;
+    --color-ma: #f0a83c;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 16px 32px -16px rgba(0, 0, 0, 0.5);
   }
@@ -738,6 +752,323 @@ main {
   color: var(--color-text);
 }
 
+/* Domestic — 종목 상세 (/domestic/[code]) */
+
+/* 순위표에서 종목명을 눌러 상세로 들어간다 */
+.row-link {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.row-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.row-link .chev {
+  margin-left: 0.25rem;
+  color: var(--color-faint);
+  font-weight: 400;
+}
+
+.row-link:hover .chev {
+  color: var(--color-primary);
+}
+
+.stock-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.stock-head h1 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.stock-code {
+  font-size: 0.85rem;
+  color: var(--color-faint);
+}
+
+.price-now {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0 0 0.6rem;
+}
+
+.price-now .amount {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.price-now .won {
+  margin-left: 0.1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta.up,
+.amount.up,
+strong.up {
+  color: var(--color-up);
+}
+
+.delta.down,
+.amount.down,
+strong.down {
+  color: var(--color-down);
+}
+
+.delta.flat,
+strong.flat {
+  color: var(--color-flat);
+}
+
+.detail-section {
+  margin-top: 2.75rem;
+}
+
+.detail-section h2 {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--color-primary);
+  font-size: 1.15rem;
+}
+
+.detail-section .table-caption {
+  margin-top: 0;
+}
+
+/* 차트 — 자바스크립트 없이 빌드 타임에 그린 인라인 SVG */
+
+.chart-card {
+  padding: 0.9rem 0.6rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.price-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.price-chart .grid-line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.price-chart .axis-label {
+  fill: var(--color-faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-chart .axis-label.mid {
+  text-anchor: middle;
+}
+
+.price-chart .axis-label.start {
+  text-anchor: start;
+}
+
+.price-chart .axis-label.end {
+  text-anchor: end;
+}
+
+.price-chart .axis-label.section {
+  font-weight: 700;
+}
+
+/* 기준일 종가 배지에 가려지는 눈금 라벨 (배지를 숨기는 모바일에서는 다시 켠다) */
+.price-chart .axis-label.behind-badge {
+  display: none;
+}
+
+.price-chart .last-line {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.55;
+}
+
+.price-chart .last-badge {
+  fill: var(--color-flat);
+}
+
+.price-chart .last-badge.up {
+  fill: var(--color-up);
+}
+
+.price-chart .last-badge.down {
+  fill: var(--color-down);
+}
+
+/* 채도 높은 배지 위에 얹는 글자라 두 테마 모두 흰색이 맞다 */
+.price-chart .last-badge-text {
+  fill: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-chart .ma-line {
+  fill: none;
+  stroke: var(--color-ma);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.price-chart .wick {
+  stroke-width: 1.2;
+  stroke: var(--color-flat);
+}
+
+.price-chart .body,
+.price-chart .vol-bar {
+  fill: var(--color-flat);
+}
+
+.price-chart .candle.up .wick {
+  stroke: var(--color-up);
+}
+
+.price-chart .candle.up .body,
+.price-chart .candle.up .vol-bar {
+  fill: var(--color-up);
+}
+
+.price-chart .candle.down .wick {
+  stroke: var(--color-down);
+}
+
+.price-chart .candle.down .body,
+.price-chart .candle.down .vol-bar {
+  fill: var(--color-down);
+}
+
+/* 거래량은 보조 정보라 한 톤 죽여서 캔들과 경쟁하지 않게 한다 */
+.price-chart .vol-bar {
+  opacity: 0.6;
+}
+
+.price-chart .candle:hover .body,
+.price-chart .candle:hover .vol-bar {
+  opacity: 0.7;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.45rem;
+  margin: 0.85rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.chart-legend strong {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.lg {
+  line-height: 1;
+}
+
+.lg.up {
+  color: var(--color-up);
+}
+
+.lg.down {
+  color: var(--color-down);
+}
+
+.lg.ma {
+  color: var(--color-ma);
+}
+
+.chart-legend .sep {
+  color: var(--color-flat);
+  opacity: 0.6;
+}
+
+.chart-note {
+  margin: 0.7rem 0 0;
+  font-size: 0.83rem;
+  color: var(--color-faint);
+}
+
+.chart-note strong {
+  color: var(--color-text-muted);
+}
+
+/* 한 주 사고팔 때 */
+
+.trade-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 1rem;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.trade-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.2rem 1.1rem;
+  background: var(--color-surface);
+}
+
+.trade-card.gap {
+  background: var(--color-down-soft);
+}
+
+.trade-card .label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.trade-card .amount {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.trade-card .sub {
+  font-size: 0.78rem;
+  color: var(--color-faint);
+}
+
+/* 이 페이지의 주인공 열이라 종가보다 진하게 */
+.rank-table .open-cell {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
 @media (max-width: 480px) {
   .term {
     grid-template-columns: 1.8rem 1fr;
@@ -750,5 +1081,36 @@ main {
   }
   .stat-bar {
     grid-template-columns: 1fr;
+  }
+  .trade-cards {
+    grid-template-columns: 1fr;
+  }
+  .stock-head h1 {
+    font-size: 1.4rem;
+  }
+  .price-now .amount {
+    font-size: 1.6rem;
+  }
+  /*
+   * 차트는 viewBox가 760이라 좁은 화면에서는 절반 이하로 축소된다. 그대로 두면
+   * 12px 축 글자가 6px로 찌그러져 못 읽는다. viewBox 단위를 키워 실제 크기를 맞춘다.
+   */
+  .price-chart .axis-label {
+    font-size: 20px;
+  }
+  .price-chart .wick {
+    stroke-width: 2;
+  }
+  .price-chart .ma-line {
+    stroke-width: 2.6;
+  }
+  /* 기준일 종가는 바로 위 헤더에 크게 적혀 있으니 좁은 화면에서는 배지를 뺀다 */
+  .price-chart .last-badge,
+  .price-chart .last-badge-text {
+    display: none;
+  }
+  /* 배지가 사라졌으니 가려뒀던 눈금 라벨을 되살린다 */
+  .price-chart .axis-label.behind-badge {
+    display: unset;
   }
 }

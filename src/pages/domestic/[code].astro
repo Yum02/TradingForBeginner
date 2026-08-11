@@ -1,0 +1,166 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import PriceChart from "../../components/PriceChart.astro";
+import {
+  daily,
+  formatDate,
+  formatPrice,
+  formatSigned,
+  formatSignedPercent,
+  formatVolume,
+  direction,
+  tradeCost,
+  periodChange,
+  exact,
+  type StockSeries,
+} from "../../data/domestic";
+
+export function getStaticPaths() {
+  return Object.values(daily.series).map((series) => ({
+    params: { code: series.code },
+    props: { series },
+  }));
+}
+
+interface Props {
+  series: StockSeries;
+}
+
+const { series } = Astro.props;
+const { window: period } = daily;
+
+const days = series.days;
+const last = days[days.length - 1];
+// "최근 1주일" = 최근 5영업일. 주말·휴장일은 애초에 데이터에 없다.
+const week = days.slice(-5);
+const cost = tradeCost(last.close, series.kind);
+const change = periodChange(days);
+const taxFree = cost.tax === 0;
+const kindLabel = series.kind === "주식" ? "개별 종목" : series.kind;
+---
+
+<Layout
+  title={series.name}
+  description={`${series.name}(${series.code})의 최근 1개월 주가 차트와 한 주당 매수·매도 가격, 최근 1주일 시가`}
+>
+  <a class="back-link" href="/domestic">← 국내 주식 목록으로</a>
+
+  <div class="page-header">
+    <div class="stock-head">
+      <h1>{series.name}</h1>
+      <span class="stock-code mono">{series.code}</span>
+      <span class={`mkt-badge ${series.market === "KOSPI" ? "kospi" : "kosdaq"}`}>
+        {series.market === "KOSPI" ? "코스피" : "코스닥"}
+      </span>
+      <span class="kind-badge">{kindLabel}</span>
+    </div>
+
+    <p class="price-now">
+      <span class="amount mono">{formatPrice(last.close)}<span class="won">원</span></span>
+      <span class={`delta ${direction(last.change)}`}>
+        {formatSigned(last.change)}원 ({formatSignedPercent(last.changeRate)})
+      </span>
+    </p>
+    <p class="as-of">{formatDate(last.date)} 종가 기준 · 전일 대비</p>
+  </div>
+
+  <section class="detail-section">
+    <h2>최근 1개월 주가 흐름</h2>
+    <p class="table-caption">
+      {formatDate(period.from)} ~ {formatDate(period.to)} · {days.length}영업일 ·
+      이 기간 동안 <strong class={direction(change.diff)}>{formatSignedPercent(change.rate)}</strong> 움직였습니다.
+    </p>
+
+    <PriceChart series={series} dates={daily.dates} />
+  </section>
+
+  <section class="detail-section">
+    <h2>한 주 사고팔 때</h2>
+    <p class="table-caption">
+      기준일 종가로 <strong>딱 한 주</strong>를 사고팔면 얼마가 오가는지 계산했습니다.
+    </p>
+
+    <div class="trade-cards">
+      <div class="trade-card">
+        <span class="label">살 때 내는 돈</span>
+        <span class="amount mono" title={exact(cost.buy, "원")}>{formatPrice(cost.buy)}원</span>
+        <span class="sub">주식을 살 때는 세금이 없습니다</span>
+      </div>
+      <div class="trade-card">
+        <span class="label">팔 때 받는 돈</span>
+        <span class="amount mono" title={exact(cost.sell, "원")}>{formatPrice(cost.sell)}원</span>
+        <span class="sub">
+          {taxFree
+            ? `${series.kind}는 증권거래세가 없습니다`
+            : `종가에서 거래세 ${formatPrice(cost.tax)}원을 뺀 금액`}
+        </span>
+      </div>
+      <div class={`trade-card ${taxFree ? "" : "gap"}`}>
+        <span class="label">{taxFree ? "사고팔 때 세금" : "사자마자 팔면"}</span>
+        <span class={`amount mono ${taxFree ? "" : "down"}`}>
+          {taxFree ? "0원" : `-${formatPrice(cost.tax)}원`}
+        </span>
+        <span class="sub">
+          {taxFree ? "매수·매도 모두 0%" : `매도 금액의 ${(cost.rate * 100).toFixed(2)}%`}
+        </span>
+      </div>
+    </div>
+
+    <p class="chart-note">
+      기준일 하루 동안 이 종목은 실제로 <strong class="mono">{formatPrice(last.low)}원</strong> ~ <strong class="mono">{formatPrice(last.high)}원</strong> 사이에서 거래됐습니다.
+      주가는 하루 안에서도 계속 움직이므로, 실제로 사고파는 가격은 위 종가와 다를 수 있습니다.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">초보자가 자주 놓치는 것</p>
+      <ul>
+        <li><strong>세금은 팔 때만 붙습니다.</strong> 살 때는 0원, 팔 때만 금액의 0.20%를 뗍니다.</li>
+        <li>그래서 <strong>사자마자 같은 가격에 팔면 손해</strong>입니다. 최소한 세금만큼은 올라야 본전입니다.</li>
+        <li>ETF·ETN은 증권거래세가 <strong>면제</strong>라 이 부담이 없습니다.</li>
+        <li>여기에 증권사 <strong>위탁수수료</strong>가 따로 붙습니다. 보통 0.015% 안팎이지만 증권사마다 다르고 무료인 곳도 있어, 위 계산에는 넣지 않았습니다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="detail-section">
+    <h2>최근 1주일 시가</h2>
+    <p class="table-caption">
+      <strong>시가</strong>는 그날 장이 열리고 <strong>맨 처음 체결된 가격</strong>입니다.
+      전날 종가와 시가가 크게 벌어지면 장이 열리기 전에 큰 소식이 있었다는 뜻입니다.
+    </p>
+
+    <div class="table-wrap">
+      <table class="rank-table">
+        <thead>
+          <tr>
+            <th scope="col">날짜</th>
+            <th scope="col" class="col-num">시가 (원)</th>
+            <th scope="col" class="col-num">종가 (원)</th>
+            <th scope="col" class="col-num">전일 대비</th>
+            <th scope="col" class="col-num">거래량 (주)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {week.map((bar) => (
+            <tr>
+              <th scope="row" class="col-name mono">{formatDate(bar.date)}</th>
+              <td class="col-num mono open-cell" title={exact(bar.open, "원")}>{formatPrice(bar.open)}</td>
+              <td class="col-num mono" title={exact(bar.close, "원")}>{formatPrice(bar.close)}</td>
+              <td class={`col-num mono delta ${direction(bar.change)}`}>
+                {formatSigned(bar.change)} ({formatSignedPercent(bar.changeRate)})
+              </td>
+              <td class="col-num mono" title={exact(bar.volume, "주")}>{formatVolume(bar.volume)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="notice">
+    출처: <strong>한국거래소(KRX) OPEN API</strong> · 기준일 {formatDate(last.date)} ·
+    증권거래세율은 2026년 1월 개정 기준(코스피·코스닥 0.20%, ETF·ETN 면제)이며 위탁수수료는 제외했습니다 ·
+    거래소는 당일 자료를 하루 뒤에 공개하므로 기준일이 오늘보다 앞설 수 있습니다 ·
+    이 자료는 정보 제공용이며 투자 권유가 아닙니다.
+  </p>
+</Layout>

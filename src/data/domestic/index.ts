@@ -48,14 +48,32 @@ export interface StockSeries {
   name: string;
   market: Market;
   kind: Kind;
-  /** 날짜 오름차순. 가장 마지막이 기준일이다. */
+  /** 기준일 상장주식수 (주) — 거래소 공시값 */
+  listedShares: number;
+  /** 기준일 시가총액 (원) — 우리가 곱하지 않고 거래소가 계산한 값 */
+  marketCap: number;
+  /** ETF 순자산가치 / ETN 증권당 지표가치 (원). 개별 주식은 0 */
+  nav: number;
+  /**
+   * 날짜 오름차순, 가장 마지막이 기준일. 여기에는 지표 계산용 6개월치가 통째로 들어 있다.
+   * 차트에 그릴 최근 1개월만 필요하면 chartBars()로 잘라 쓴다.
+   */
   days: DayBar[];
+}
+
+export interface Window {
+  from: string;
+  to: string;
+  tradingDays: number;
 }
 
 export interface DomesticDaily {
   generatedAt: string;
-  window: { from: string; to: string; tradingDays: number };
-  /** 기간 내 영업일 달력 — 차트 x축을 종목과 무관하게 고정하는 데 쓴다. */
+  /** 순위 집계·차트에 쓰는 최근 1개월 */
+  window: Window;
+  /** 60일선·MACD 같은 지표를 계산하려고 따로 모아둔 6개월 */
+  history: Window;
+  /** window 안의 영업일 달력 — 차트 x축을 종목과 무관하게 고정하는 데 쓴다. */
   dates: string[];
   series: Record<string, StockSeries>;
 }
@@ -78,6 +96,14 @@ export function hasDetailPage(code: string): boolean {
 
 export function getSeries(code: string): StockSeries | undefined {
   return daily.series[code];
+}
+
+/**
+ * 차트에 그릴 최근 1개월 구간만 잘라낸다.
+ * series.days에는 지표 계산용 6개월이 들어 있어 그대로 그리면 캔들이 뭉개진다.
+ */
+export function chartBars(series: StockSeries): DayBar[] {
+  return series.days.filter((bar) => bar.date >= daily.window.from);
 }
 
 /**

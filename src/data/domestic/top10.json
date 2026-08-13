@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-11T19:26:30+09:00",
+  "generatedAt": "2026-08-13T21:59:01+09:00",
   "window": {
-    "from": "20260710",
-    "to": "20260810",
-    "tradingDays": 21
+    "from": "20260713",
+    "to": "20260812",
+    "tradingDays": 22
   },
   "stocks": [
     {
@@ -12,9 +12,9 @@
       "name": "삼성전자",
       "market": "KOSPI",
       "kind": "주식",
-      "volume": 634079520,
-      "value": 155133467995387,
-      "lastClose": 230000
+      "volume": 664404157,
+      "value": 161724279572627,
+      "lastClose": 255500
     },
     {
       "rank": 2,
@@ -22,9 +22,9 @@
       "name": "빛과전자",
       "market": "KOSDAQ",
       "kind": "주식",
-      "volume": 383402412,
-      "value": 1029388171965,
-      "lastClose": 3115
+      "volume": 388867048,
+      "value": 1050856077450,
+      "lastClose": 2955
     },
     {
       "rank": 3,
@@ -32,29 +32,29 @@
       "name": "흥아해운",
       "market": "KOSPI",
       "kind": "주식",
-      "volume": 359912422,
-      "value": 669677706105,
-      "lastClose": 1691
+      "volume": 359031049,
+      "value": 668285576941,
+      "lastClose": 1712
     },
     {
       "rank": 4,
-      "code": "067290",
-      "name": "JW신약",
-      "market": "KOSDAQ",
-      "kind": "주식",
-      "volume": 323016001,
-      "value": 655993173576,
-      "lastClose": 2225
-    },
-    {
-      "rank": 5,
       "code": "006340",
       "name": "대원전선",
       "market": "KOSPI",
       "kind": "주식",
-      "volume": 317052910,
-      "value": 4238959390370,
-      "lastClose": 14950
+      "volume": 345793472,
+      "value": 4757033623560,
+      "lastClose": 16030
+    },
+    {
+      "rank": 5,
+      "code": "067290",
+      "name": "JW신약",
+      "market": "KOSDAQ",
+      "kind": "주식",
+      "volume": 338587441,
+      "value": 694422709019,
+      "lastClose": 2325
     },
     {
       "rank": 6,
@@ -62,9 +62,9 @@
       "name": "대한광통신",
       "market": "KOSDAQ",
       "kind": "주식",
-      "volume": 270405313,
-      "value": 3045409774330,
-      "lastClose": 14040
+      "volume": 266790159,
+      "value": 3013694238835,
+      "lastClose": 13510
     },
     {
       "rank": 7,
@@ -72,39 +72,39 @@
       "name": "씨피시스템",
       "market": "KOSDAQ",
       "kind": "주식",
-      "volume": 243860669,
-      "value": 977312066857,
-      "lastClose": 4105
+      "volume": 246165804,
+      "value": 986930029306,
+      "lastClose": 4000
     },
     {
       "rank": 8,
-      "code": "073240",
-      "name": "금호타이어",
-      "market": "KOSPI",
-      "kind": "주식",
-      "volume": 170960727,
-      "value": 1191022911405,
-      "lastClose": 7370
-    },
-    {
-      "rank": 9,
       "code": "002700",
       "name": "신일전자",
       "market": "KOSPI",
       "kind": "주식",
-      "volume": 169111878,
-      "value": 198866745730,
-      "lastClose": 1029
+      "volume": 169971221,
+      "value": 199678346280,
+      "lastClose": 1012
     },
     {
-      "rank": 10,
+      "rank": 9,
       "code": "475150",
       "name": "SK이터닉스",
       "market": "KOSPI",
       "kind": "주식",
-      "volume": 165423934,
-      "value": 9903490787700,
-      "lastClose": 51300
+      "volume": 169942434,
+      "value": 10153548443625,
+      "lastClose": 52700
+    },
+    {
+      "rank": 10,
+      "code": "073240",
+      "name": "금호타이어",
+      "market": "KOSPI",
+      "kind": "주식",
+      "volume": 167736774,
+      "value": 1171598293350,
+      "lastClose": 7420
     }
   ],
   "all": [
@@ -114,9 +114,9 @@
       "name": "KODEX 200선물인버스2X",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 211000489840,
-      "value": 21858383303044,
-      "lastClose": 96
+      "volume": 217214439895,
+      "value": 22503761590138,
+      "lastClose": 87
     },
     {
       "rank": 2,
@@ -124,9 +124,9 @@
       "name": "KODEX 인버스",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 22968596849,
-      "value": 26251126962516,
-      "lastClose": 1137
+      "volume": 23998407633,
+      "value": 27479727245531,
+      "lastClose": 1080
     },
     {
       "rank": 3,
@@ -134,9 +134,9 @@
       "name": "KODEX SK하이닉스단일종목레버리지",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 4764340144,
-      "value": 61853705034408,
-      "lastClose": 7385
+      "volume": 4655599457,
+      "value": 58344252647139,
+      "lastClose": 8225
     },
     {
       "rank": 4,
@@ -144,9 +144,9 @@
       "name": "SOL SK하이닉스선물단일종목인버스2X",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 4470851741,
-      "value": 53347047123200,
-      "lastClose": 11080
+      "volume": 4257777817,
+      "value": 51496574983125,
+      "lastClose": 9810
     },
     {
       "rank": 5,
@@ -154,9 +154,9 @@
       "name": "TIGER 200선물인버스2X",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 3222195503,
-      "value": 358015474496,
-      "lastClose": 105
+      "volume": 3474724926,
+      "value": 384082818020,
+      "lastClose": 94
     },
     {
       "rank": 6,
@@ -164,9 +164,9 @@
       "name": "KODEX 코스닥150레버리지",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 2278005095,
-      "value": 14201126300441,
-      "lastClose": 7750
+      "volume": 2445339457,
+      "value": 15459591080407,
+      "lastClose": 7680
     },
     {
       "rank": 7,
@@ -174,29 +174,29 @@
       "name": "TIGER SK하이닉스단일종목레버리지",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 2177802136,
-      "value": 24493267748682,
-      "lastClose": 6235
+      "volume": 2138247160,
+      "value": 23176875095839,
+      "lastClose": 6945
     },
     {
       "rank": 8,
-      "code": "0193W0",
-      "name": "KODEX 삼성전자단일종목레버리지",
-      "market": "KOSPI",
-      "kind": "ETF",
-      "volume": 1479017344,
-      "value": 18349456941534,
-      "lastClose": 9665
-    },
-    {
-      "rank": 9,
       "code": "462330",
       "name": "KODEX 2차전지산업레버리지",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 1389602226,
-      "value": 1199231029797,
-      "lastClose": 1045
+      "volume": 1454580002,
+      "value": 1268310012833,
+      "lastClose": 1010
+    },
+    {
+      "rank": 9,
+      "code": "0193W0",
+      "name": "KODEX 삼성전자단일종목레버리지",
+      "market": "KOSPI",
+      "kind": "ETF",
+      "volume": 1431079437,
+      "value": 17335748392392,
+      "lastClose": 11830
     },
     {
       "rank": 10,
@@ -204,9 +204,9 @@
       "name": "KODEX 코스닥150선물인버스",
       "market": "KOSPI",
       "kind": "ETF",
-      "volume": 1145571144,
-      "value": 3108699661526,
-      "lastClose": 2310
+      "volume": 1250606403,
+      "value": 3341615749725,
+      "lastClose": 2320
     }
   ]
 }

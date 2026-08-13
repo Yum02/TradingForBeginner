@@ -1,8 +1,13 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import PriceChart from "../../components/PriceChart.astro";
+import SignalPanel from "../../components/SignalPanel.astro";
+import ValuationPanel from "../../components/ValuationPanel.astro";
+import CandleGuide from "../../components/CandleGuide.astro";
+import DecisionGuide from "../../components/DecisionGuide.astro";
 import {
   daily,
+  chartBars,
   formatDate,
   formatPrice,
   formatSigned,
@@ -31,17 +36,19 @@ const { window: period } = daily;
 
 const days = series.days;
 const last = days[days.length - 1];
+// series.days는 지표용 6개월치다. 차트와 "이 기간 등락률"은 최근 1개월만 쓴다.
+const month = chartBars(series);
 // "최근 1주일" = 최근 5영업일. 주말·휴장일은 애초에 데이터에 없다.
 const week = days.slice(-5);
 const cost = tradeCost(last.close, series.kind);
-const change = periodChange(days);
+const change = periodChange(month);
 const taxFree = cost.tax === 0;
 const kindLabel = series.kind === "주식" ? "개별 종목" : series.kind;
 ---
 
 <Layout
   title={series.name}
-  description={`${series.name}(${series.code})의 최근 1개월 주가 차트와 한 주당 매수·매도 가격, 최근 1주일 시가`}
+  description={`${series.name}(${series.code})의 기술적 신호 종합, 최근 1개월 주가 차트, 한 주당 매수·매도 가격`}
 >
   <a class="back-link" href="/domestic">← 국내 주식 목록으로</a>
 
@@ -64,15 +71,22 @@ const kindLabel = series.kind === "주식" ? "개별 종목" : series.kind;
     <p class="as-of">{formatDate(last.date)} 종가 기준 · 전일 대비</p>
   </div>
 
+  <SignalPanel series={series} />
+
+  <ValuationPanel series={series} />
+
   <section class="detail-section">
     <h2>최근 1개월 주가 흐름</h2>
     <p class="table-caption">
-      {formatDate(period.from)} ~ {formatDate(period.to)} · {days.length}영업일 ·
+      {formatDate(period.from)} ~ {formatDate(period.to)} · {month.length}영업일 ·
       이 기간 동안 <strong class={direction(change.diff)}>{formatSignedPercent(change.rate)}</strong> 움직였습니다.
+      위에서 본 신호가 실제로 어떤 모양인지 여기서 눈으로 확인하세요.
     </p>
 
     <PriceChart series={series} dates={daily.dates} />
   </section>
+
+  <CandleGuide series={series} />
 
   <section class="detail-section">
     <h2>한 주 사고팔 때</h2>
@@ -157,9 +171,13 @@ const kindLabel = series.kind === "주식" ? "개별 종목" : series.kind;
     </div>
   </section>
 
+  <DecisionGuide />
+
   <p class="notice">
     출처: <strong>한국거래소(KRX) OPEN API</strong> · 기준일 {formatDate(last.date)} ·
     증권거래세율은 2026년 1월 개정 기준(코스피·코스닥 0.20%, ETF·ETN 면제)이며 위탁수수료는 제외했습니다 ·
+    기술적 신호는 {formatDate(daily.history.from)}부터 모은 최대 {daily.history.tradingDays}영업일치
+    종가로 계산한 값이며, 정해진 공식에 숫자를 넣어 나온 결과일 뿐 앞으로의 주가를 맞히지 못합니다 ·
     거래소는 당일 자료를 하루 뒤에 공개하므로 기준일이 오늘보다 앞설 수 있습니다 ·
     이 자료는 정보 제공용이며 투자 권유가 아닙니다.
   </p>

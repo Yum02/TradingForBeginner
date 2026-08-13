@@ -1,5 +1,14 @@
 ---
-import { formatVolume, formatValue, formatPrice, exact, hasDetailPage, type VolumeRow } from "../data/domestic";
+import {
+  formatVolume,
+  formatValue,
+  formatPrice,
+  exact,
+  hasDetailPage,
+  getSeries,
+  type VolumeRow,
+} from "../data/domestic";
+import { analyze, type Verdict } from "../data/domestic/signals";
 
 interface Props {
   rows: VolumeRow[];
@@ -8,6 +17,17 @@ interface Props {
 }
 
 const { rows, showKind = false } = Astro.props;
+
+/**
+ * 종목마다 기술적 신호 한 줄 요약을 붙인다. 순위표에서 바로 방향이 보이면
+ * 어떤 종목을 열어볼지 고르기 쉽다. 자세한 근거는 상세 페이지에 있다.
+ */
+const verdicts = new Map<string, Verdict>(
+  rows.flatMap((row) => {
+    const series = getSeries(row.code);
+    return series ? [[row.code, analyze(series).verdict] as [string, Verdict]] : [];
+  }),
+);
 ---
 
 <div class="table-wrap">
@@ -21,6 +41,7 @@ const { rows, showKind = false } = Astro.props;
         <th scope="col" class="col-num">누적 거래량 (주)</th>
         <th scope="col" class="col-num">누적 거래대금 (원)</th>
         <th scope="col" class="col-num">기준일 종가 (원)</th>
+        <th scope="col">기술적 신호</th>
       </tr>
     </thead>
     <tbody>
@@ -45,6 +66,15 @@ const { rows, showKind = false } = Astro.props;
           <td class="col-num mono" title={exact(row.volume, "주")}>{formatVolume(row.volume)}</td>
           <td class="col-num mono" title={exact(row.value, "원")}>{formatValue(row.value)}</td>
           <td class="col-num mono" title={exact(row.lastClose, "원")}>{formatPrice(row.lastClose)}</td>
+          <td>
+            {verdicts.has(row.code) ? (
+              <span class={`signal-badge ${verdicts.get(row.code)!.key}`} title={verdicts.get(row.code)!.summary}>
+                {verdicts.get(row.code)!.short}
+              </span>
+            ) : (
+              <span class="signal-badge">—</span>
+            )}
+          </td>
         </tr>
       ))}
     </tbody>

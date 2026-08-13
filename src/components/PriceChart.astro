@@ -10,16 +10,18 @@
  * SVG를 직접 그린다. 십자선·툴팁은 JS가 필요하니, 대신 캔들마다 <title>을 넣어
  * 브라우저 기본 툴팁으로 시·고·저·종을 보여준다.
  */
-import { shortDate, formatSignedPercent, type StockSeries } from "../data/domestic";
+import { shortDate, formatSignedPercent, chartBars, type StockSeries } from "../data/domestic";
+import { sma, SHORT_MA, MID_MA } from "../data/domestic/signals";
 
 interface Props {
+  /** 지표용 6개월치가 통째로 들어온다. 그려야 할 것은 그중 최근 1개월이다. */
   series: StockSeries;
   /** 기간 내 영업일 달력. 거래정지로 빠진 날이 있어도 x축이 밀리지 않게 한다. */
   dates: string[];
 }
 
 const { series, dates } = Astro.props;
-const bars = series.days;
+const bars = chartBars(series);
 
 // ── 좌표계 ────────────────────────────────────────────────────────────────
 const W = 760;
@@ -38,10 +40,38 @@ const slot = plotW / Math.max(dates.length, 1);
 const bodyW = Math.min(slot * 0.62, 14);
 const xAt = (i: number) => PAD_L + slot * (i + 0.5);
 
+// ── 이동평균선 값 ─────────────────────────────────────────────────────────
+// 6개월치를 들고 있으므로 창의 첫날에도 이미 5일·20일 평균이 존재한다. 1개월치만
+// 갖고 계산하던 때와 달리 선이 왼쪽 끝부터 끊기지 않는다. 60일선까지 얹으면 캔들
+// 21개짜리 화면이 선으로 뒤덮여서, 매수·매도 판단에서 가장 많이 쓰는 둘만 그린다.
+// (60일선 값은 아래 신호 패널이 숫자로 알려준다.)
+//
+// 가격 축보다 먼저 계산하는 이유는, 급락한 종목처럼 20일 평균이 이번 달 가격대에서
+// 한참 벗어나 있는 경우에도 선이 화면 밖으로 나가지 않게 축에 함께 반영하기 위해서다.
+const slotIndex = new Map(dates.map((d, i) => [d, i]));
+
+/** 창 안에 그릴 수 있는 (x칸, 평균값) 점만 추린다. */
+function maPoints(period: number): { slot: number; value: number }[] {
+  const values = sma(
+    series.days.map((bar) => bar.close),
+    period,
+  );
+  return series.days.flatMap((bar, i) => {
+    const value = values[i];
+    const slot = slotIndex.get(bar.date);
+    // 창 바깥(6개월 중 앞부분)의 값은 그릴 자리가 없다.
+    return value === null || slot === undefined ? [] : [{ slot, value }];
+  });
+}
+
+const ma5 = maPoints(SHORT_MA);
+const ma20 = maPoints(MID_MA);
+
 // ── 가격 축 ───────────────────────────────────────────────────────────────
-// 종가가 아니라 고가·저가까지 담아야 꼬리가 잘리지 않는다.
-const hi = Math.max(...bars.map((b) => b.high));
-const lo = Math.min(...bars.map((b) => b.low));
+// 종가가 아니라 고가·저가까지 담아야 꼬리가 잘리지 않는다. 이동평균선도 함께 담는다.
+const maValues = [...ma5, ...ma20].map((p) => p.value);
+const hi = Math.max(...bars.map((b) => b.high), ...maValues);
+const lo = Math.min(...bars.map((b) => b.low), ...maValues);
 // 한 달 내내 값이 같은 종목이면 span이 0이 되어 0으로 나눈다. 반드시 막는다.
 const span = hi - lo || Math.max(hi * 0.02, 1);
 const top = hi + span * 0.06;
@@ -69,20 +99,12 @@ for (let v = Math.ceil(bot / step) * step; v <= top; v += step) gridValues.push(
 const volMax = Math.max(...bars.map((b) => b.volume)) || 1;
 const volH = (v: number) => Math.max((v / volMax) * VOL_H, 1);
 
-// ── 5일 이동평균선 ────────────────────────────────────────────────────────
-// 1개월치(약 21영업일)뿐이라 20일선은 점이 몇 개 안 나오고 60·120일선은 아예
-// 불가능하다. 없는 걸 그리느니 5일선 하나만 정확히 그린다.
-const MA_DAYS = 5;
-const slotIndex = new Map(dates.map((d, i) => [d, i]));
-const maPoints = bars
-  .map((bar, i) => {
-    if (i < MA_DAYS - 1) return null;
-    let sum = 0;
-    for (let k = i - MA_DAYS + 1; k <= i; k++) sum += bars[k].close;
-    return { x: xAt(slotIndex.get(bar.date) ?? i), y: yAt(sum / MA_DAYS) };
-  })
-  .filter((p): p is { x: number; y: number } => p !== null);
-const maPath = maPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+// ── 이동평균선 경로 ───────────────────────────────────────────────────────
+const toPath = (points: { slot: number; value: number }[]) =>
+  points.map((p, i) => `${i === 0 ? "M" : "L"}${xAt(p.slot).toFixed(1)} ${yAt(p.value).toFixed(1)}`).join(" ");
+
+const ma5Path = toPath(ma5);
+const ma20Path = toPath(ma20);
 
 // ── 캔들 ──────────────────────────────────────────────────────────────────
 const candles = bars.map((bar, i) => {
@@ -156,8 +178,9 @@ const summary =
       {last.close.toLocaleString("ko-KR")}
     </text>
 
-    {/* 5일 이동평균선 — 캔들보다 아래에 깔아 캔들을 가리지 않게 한다 */}
-    {maPoints.length > 1 && <path class="ma-line" d={maPath} />}
+    {/* 이동평균선 — 캔들보다 아래에 깔아 캔들을 가리지 않게 한다 */}
+    {ma20.length > 1 && <path class="ma-line mid" d={ma20Path} />}
+    {ma5.length > 1 && <path class="ma-line" d={ma5Path} />}
 
     {/* 캔들 + 거래량 막대 (같은 x, 같은 색) */}
     {candles.map((c) => (
@@ -182,10 +205,12 @@ const summary =
   <span class="lg up">■</span> 오른 날(양봉)
   <span class="lg down">■</span> 내린 날(음봉)
   <span class="sep">·</span> 위아래 선은 그날의 <strong>고가·저가</strong>
-  <span class="sep">·</span> <span class="lg ma">━</span> 5일 평균 종가
+  <span class="sep">·</span> <span class="lg ma">━</span> 5일 평균
+  <span class="sep">·</span> <span class="lg ma mid">━</span> 20일 평균
   <span class="sep">·</span> 아래 막대는 <strong>거래량</strong>
 </p>
 <p class="chart-note">
   국내는 오르면 빨강, 내리면 파랑입니다. 미국 사이트는 반대로 오르면 초록이니 헷갈리지 마세요.
   캔들에 마우스를 올리면 그날의 시가·고가·저가·종가가 나옵니다.
+  두 평균선이 서로 뒤바뀌는 자리가 위에서 말한 <strong>골든크로스·데드크로스</strong>입니다.
 </p>

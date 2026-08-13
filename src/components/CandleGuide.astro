@@ -1,0 +1,170 @@
+---
+/**
+ * 캔들 읽는 법 — 차트 바로 아래에 붙는 해설.
+ *
+ * 위 차트에 캔들을 그려놓고 "빨강은 오른 날"만 알려주면 절반만 설명한 것이다. 캔들 하나가
+ * 담은 정보는 방향이 아니라 **그날의 힘겨루기**이고, 그건 몸통과 꼬리의 비율에 들어 있다.
+ * 그래서 구조도를 직접 그려 보여주고, 기준일 캔들이 실제로 어떤 모양인지 읽어준다.
+ *
+ * 그림은 전부 빌드 타임에 만든 인라인 SVG다. 사이트 전체가 자바스크립트 0줄이고 외부
+ * 이미지도 쓰지 않는다는 원칙을 그대로 따른다.
+ */
+import { readCandle, countMismatch } from "../data/domestic/candles";
+import { formatDate, formatPrice, formatSigned, formatSignedPercent, direction, type StockSeries } from "../data/domestic";
+
+interface Props {
+  series: StockSeries;
+}
+
+const { series } = Astro.props;
+const days = series.days;
+const last = days[days.length - 1];
+const read = readCandle(last, days.slice(0, -1));
+
+const mismatchDays = countMismatch(days);
+const mismatchPct = Math.round((mismatchDays / days.length) * 100);
+
+/**
+ * 대표 모양 미니 캔들. 값은 0~100 눈금의 (고가, 시가, 종가, 저가)이고 위가 100이다.
+ * 실제 시세가 아니라 모양을 보여주려고 지어낸 값이라, 숫자는 붙이지 않는다.
+ */
+const SHAPES: { name: string; color: "up" | "down"; high: number; open: number; close: number; low: number; note: string }[] = [
+  { name: "장대양봉", color: "up", high: 98, open: 15, close: 90, low: 8, note: "하루 내내 밀어올린 날" },
+  { name: "장대음봉", color: "down", high: 92, open: 88, close: 12, low: 5, note: "하루 내내 밀린 날" },
+  { name: "윗꼬리 긴 양봉", color: "up", high: 98, open: 25, close: 50, low: 18, note: "올랐다가 눌려 마감" },
+  { name: "망치형", color: "up", high: 92, open: 72, close: 86, low: 8, note: "밀렸다가 되돌아온 날" },
+  { name: "유성형", color: "down", high: 95, open: 22, close: 12, low: 8, note: "올려봤다가 반납한 날" },
+  { name: "도지", color: "up", high: 96, open: 52, close: 49, low: 6, note: "사려는 쪽과 팔려는 쪽이 팽팽" },
+];
+
+// 미니 캔들 좌표계 — 0~100 값을 위아래 여백 6px 안쪽에 그린다.
+const MINI_H = 88;
+const miniY = (v: number) => 6 + ((100 - v) / 100) * (MINI_H - 12);
+
+/*
+ * 구조도 좌표계. 캔들을 왼쪽에 붙이고 오른쪽 전부를 설명 글자에 내준다.
+ * 가장 긴 라벨("아래꼬리 · 여기까지 밀렸다 되돌아옴")이 11px에서 195px쯤 되는데,
+ * 캔들을 가운데 두면 글자가 캔버스 밖으로 나가 잘린다. SVG는 viewBox 밖을 그냥 자른다.
+ */
+const D = { high: 22, bodyTop: 74, bodyBottom: 158, low: 208, x: 46, w: 32 };
+/** 안내선이 끝나고 글자가 시작되는 자리 */
+const LABEL_X = 92;
+---
+
+<section class="detail-section">
+  <h2>캔들 하나 읽는 법</h2>
+  <p class="table-caption">
+    캔들 하나에는 그날의 <strong>시가·고가·저가·종가</strong> 네 값이 들어 있습니다.
+    방향만 보고 지나치기 쉽지만, 정작 중요한 것은 <strong>몸통과 꼬리의 비율</strong>입니다.
+    그 안에 그날 사려는 쪽과 팔려는 쪽이 어떻게 힘겨루기를 했는지가 담겨 있습니다.
+  </p>
+
+  <div class="candle-anatomy">
+    <svg viewBox="0 0 320 230" class="anatomy-svg" role="img"
+      aria-label="캔들 구조도. 위에서부터 고가, 윗꼬리, 종가, 몸통, 시가, 아래꼬리, 저가 순으로 이루어져 있습니다.">
+      <title>캔들의 구조</title>
+
+      {/* 안내선 — 각 부분의 높이에 맞춰 오른쪽으로 뻗는다 */}
+      {[
+        { y: D.high, text: "고가 · 그날 가장 비쌌던 값" },
+        { y: (D.high + D.bodyTop) / 2, text: "윗꼬리 · 여기까지 올랐다 되돌아옴" },
+        { y: D.bodyTop, text: "종가 · 장이 끝날 때 값" },
+        { y: (D.bodyTop + D.bodyBottom) / 2, text: "몸통 · 시가와 종가 사이" },
+        { y: D.bodyBottom, text: "시가 · 장이 열릴 때 값" },
+        { y: (D.bodyBottom + D.low) / 2, text: "아래꼬리 · 여기까지 밀렸다 되돌아옴" },
+        { y: D.low, text: "저가 · 그날 가장 쌌던 값" },
+      ].map((row) => (
+        <g>
+          <line class="anat-line" x1={D.x + D.w / 2 + 4} y1={row.y} x2={LABEL_X - 6} y2={row.y} />
+          <text class="anat-label" x={LABEL_X} y={row.y + 4}>{row.text}</text>
+        </g>
+      ))}
+
+      {/* 양봉 하나 — 국내 관행대로 빨강 */}
+      <line class="anat-wick" x1={D.x} y1={D.high} x2={D.x} y2={D.low} />
+      <rect class="anat-body" x={D.x - D.w / 2} y={D.bodyTop} width={D.w} height={D.bodyBottom - D.bodyTop} />
+      <text class="anat-caption" x={D.x} y={D.low + 16}>양봉 (오른 날)</text>
+    </svg>
+
+    <div class="anatomy-notes">
+      <p><strong>몸통이 길면</strong> 그날 한쪽이 확실히 이겼다는 뜻입니다. 짧으면 서로 비슷한 값에서 오갔다는 뜻입니다.</p>
+      <p><strong>꼬리가 길면</strong> 장중에 그만큼 갔다가 되돌아왔다는 뜻입니다. 윗꼬리가 길면 위에서 파는 힘에 눌린 것이고, 아래꼬리가 길면 아래에서 받아주는 힘이 있었던 것입니다.</p>
+      <p>
+        국내는 오르면 <strong class="up">빨강(양봉)</strong>, 내리면 <strong class="down">파랑(음봉)</strong>입니다.
+        미국 사이트는 반대로 오르면 초록이니 헷갈리지 마세요.
+      </p>
+    </div>
+  </div>
+
+  <h3 class="sub-head">자주 보는 모양</h3>
+  <ul class="shape-grid">
+    {SHAPES.map((shape) => (
+      <li class="shape-item">
+        <svg viewBox={`0 0 40 ${MINI_H}`} class={`mini-candle ${shape.color}`} role="img" aria-label={`${shape.name} 모양`}>
+          <line class="wick" x1="20" y1={miniY(shape.high)} x2="20" y2={miniY(shape.low)} />
+          <rect
+            class="body"
+            x="10"
+            y={miniY(Math.max(shape.open, shape.close))}
+            width="20"
+            height={Math.max(miniY(Math.min(shape.open, shape.close)) - miniY(Math.max(shape.open, shape.close)), 2)}
+          />
+        </svg>
+        <span class="shape-name">{shape.name}</span>
+        <span class="shape-note">{shape.note}</span>
+      </li>
+    ))}
+  </ul>
+  <p class="chart-note">
+    같은 모양이라도 <strong>어디서 나왔는지에 따라 뜻이 달라집니다.</strong> 몸통 위에 긴 아래꼬리가 달린 모양은
+    내림세 끝에 나오면 반등 신호(<strong>망치형</strong>)로 읽지만, 오름세 끝에 나오면 하락 전환 신호(<strong>교수형</strong>)로
+    읽습니다. 윗꼬리가 긴 모양도 마찬가지로 <strong>역망치형</strong>과 <strong>유성형</strong>으로 나뉩니다.
+  </p>
+
+  <h3 class="sub-head">기준일 캔들은 이런 모양입니다</h3>
+  <div class={`candle-read ${read.color}`}>
+    <div class="read-head">
+      <span class="read-date mono">{formatDate(last.date)}</span>
+      <span class="read-name">{read.name}</span>
+    </div>
+    <p class="read-summary">{read.summary}</p>
+    <dl class="read-figures">
+      <div><dt>시가</dt><dd class="mono">{formatPrice(last.open)}원</dd></div>
+      <div><dt>고가</dt><dd class="mono">{formatPrice(last.high)}원</dd></div>
+      <div><dt>저가</dt><dd class="mono">{formatPrice(last.low)}원</dd></div>
+      <div><dt>종가</dt><dd class="mono">{formatPrice(last.close)}원</dd></div>
+    </dl>
+    <p class="read-ratio">
+      전체 폭에서 몸통이 <strong>{Math.round(read.bodyPct * 100)}%</strong>,
+      윗꼬리가 <strong>{Math.round(read.upperPct * 100)}%</strong>,
+      아래꼬리가 <strong>{Math.round(read.lowerPct * 100)}%</strong>를 차지합니다.
+    </p>
+  </div>
+
+  <div class="callout warn">
+    <p class="callout-title">캔들 색과 등락률이 어긋나 보일 때</p>
+    <ul>
+      <li>
+        캔들 색은 <strong>그날 시가</strong>와 견준 것이고, 페이지 맨 위의 등락률은 <strong>전날 종가</strong>와
+        견준 것입니다. 재는 기준이 다릅니다.
+      </li>
+      <li>
+        그래서 전날보다 훨씬 낮게 출발해 조금 회복하면 <strong>빨간 캔들인데 전일 대비는 마이너스</strong>가 됩니다.
+        이 종목만 봐도 {days.length}일 중 <strong>{mismatchDays}일({mismatchPct}%)</strong>이 그런 날이었습니다.
+      </li>
+      <li>
+        <strong>캔들 하나만 보고 사고팔면 안 됩니다.</strong> 반짝 반등이나 속임수 움직임에 걸리기 쉽습니다.
+        위에서 본 거래량·이동평균선과 함께 봐야 뜻이 생깁니다.
+      </li>
+      <li>
+        여기 차트는 하루가 캔들 하나인 <strong>일봉</strong>입니다. 단타를 하는 사람은 5분봉을,
+        길게 보는 사람은 주봉을 함께 봅니다. 처음이라면 일봉으로 전체 흐름을 먼저 익히는 편이 낫습니다.
+      </li>
+    </ul>
+  </div>
+
+  <p class="chart-note">
+    기준일 종가는 <strong class={direction(last.change)}>{formatSigned(last.change)}원({formatSignedPercent(last.changeRate)})</strong>으로
+    전날과 견준 값입니다. 캔들 모양 설명은 KB Think <em>「캔들차트 보는 법」</em>(2025)의 분류를 따랐습니다.
+  </p>
+</section>

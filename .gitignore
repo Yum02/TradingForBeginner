@@ -4,6 +4,8 @@ dist/
 .astro/
 # 수집 스크립트의 원본 응답 캐시 (npm run collect:domestic)
 .cache/
+# Cloudflare 로컬 상태 (wrangler dev)
+.wrangler/
 
 # dependencies
 node_modules/

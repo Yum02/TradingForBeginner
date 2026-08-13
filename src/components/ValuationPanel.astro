@@ -1,0 +1,161 @@
+---
+/**
+ * 기업 가치 지표 — 시가총액·PER·PBR (ETF·ETN은 순자산가치·괴리율).
+ *
+ * 신호 패널이 "가격이 어떻게 움직였나"라면 여기는 "값어치가 얼마인가"다. 파는 이유 중
+ * 하나가 "값이 너무 비싸졌을 때"인데 그 판단은 차트로는 할 수 없어서, 이 섹션이 없으면
+ * 판단의 한쪽 다리가 비어 있는 셈이 된다.
+ *
+ * 숫자에 좋다·나쁘다 색을 칠하지 않은 것은 의도적이다. 비교 기준 없는 배수는 뜻이 없고,
+ * 초보자가 가장 흔히 하는 실수가 "PER 10이면 싸다"고 외우는 것이기 때문이다. 대신 무엇과
+ * 비교해야 하는지를 문장으로 붙였다.
+ */
+import { analyzeValuation, formatMoney, type Valuation } from "../data/domestic/valuation";
+import { formatDate, type StockSeries } from "../data/domestic";
+
+interface Props {
+  series: StockSeries;
+}
+
+const { series } = Astro.props;
+const valuation: Valuation = analyzeValuation(series);
+const { metrics, trend } = valuation;
+const isStock = series.kind === "주식";
+const last = series.days[series.days.length - 1];
+
+// 주의 문구는 화면에 실제로 떠 있는 숫자에 대해서만 붙인다. PER·PBR 칸이 없는데
+// "PER 10을 싸다고 외우지 마세요"라고 적어두면, 있지도 않은 숫자를 조심하라는 말이 되고
+// 초보자에게는 무언가 빠졌다는 인상만 남는다. ETF·ETN 페이지도 마찬가지 이유로
+// PER 이야기 대신 괴리율 이야기를 받는다.
+const hasRatios = metrics.some((metric) => metric.key === "per" || metric.key === "pbr");
+---
+
+<section class="detail-section">
+  <h2>이 회사는 얼마짜리인가</h2>
+  <p class="table-caption">
+    {isStock ? (
+      <>
+        앞의 신호가 <strong>가격의 움직임</strong>을 봤다면, 여기서는 <strong>값어치</strong>를 봅니다.
+        “너무 비싸졌을 때”는 파는 이유가 되지만, 차트만 봐서는 비싼지 싼지 알 수 없습니다.
+      </>
+    ) : (
+      <>
+        ETF·ETN은 회사가 아니라 <strong>여러 종목을 담은 그릇</strong>이라 PER·PBR이 없습니다.
+        대신 담긴 것의 값어치와 지금 가격을 견주는 <strong>괴리율</strong>이 그 자리를 대신합니다.
+      </>
+    )}
+  </p>
+
+  <div class="metric-grid">
+    {metrics.map((metric) => (
+      <div class={`metric-card${metric.value === null ? " empty" : ""}`}>
+        <span class="label">{metric.label}</span>
+        <span class="value mono">{metric.value ?? "계산 불가"}</span>
+        <span class="detail">{metric.detail}</span>
+        <p class="meaning">{metric.meaning}</p>
+      </div>
+    ))}
+  </div>
+
+  {valuation.unavailable && (
+    <p class="chart-note">
+      <strong>PER·PBR을 계산하지 못했습니다.</strong> {valuation.unavailable}
+    </p>
+  )}
+
+  {trend && (
+    <>
+      <h3 class="sub-head">이익이 늘고 있나, 줄고 있나</h3>
+      <p class="table-caption">
+        PER 한 숫자보다 이쪽이 중요합니다. 같은 10배라도 <strong>이익이 늘어가는 회사</strong>의 10배와
+        <strong>줄어가는 회사</strong>의 10배는 전혀 다른 뜻입니다.
+      </p>
+      <div class="table-wrap">
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th scope="col">사업연도</th>
+              <th scope="col" class="col-num">당기순이익</th>
+              <th scope="col" class="col-num">자본총계</th>
+            </tr>
+          </thead>
+          <tbody>
+            {trend.years.map((year) => (
+              <tr>
+                <th scope="row" class="col-name mono">{year.year}년</th>
+                <td class={`col-num mono ${year.netIncome !== null && year.netIncome < 0 ? "down" : ""}`}>
+                  {year.netIncome === null ? "—" : `${formatMoney(year.netIncome)}원`}
+                </td>
+                <td class="col-num mono">{year.equity === null ? "—" : `${formatMoney(year.equity)}원`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class={`trend-verdict ${trend.direction}`}>
+        <strong>{trend.headline}</strong> {trend.note}
+      </p>
+    </>
+  )}
+
+  {hasRatios && (
+    <div class="callout warn">
+      <p class="callout-title">숫자 하나로 싸다·비싸다를 정하지 마세요</p>
+      <ul>
+        <li>
+          <strong>PER 10은 싸고 25는 비싸다</strong>는 것은 초보자가 가장 흔히 하는 착각입니다.
+          평소 30배에 거래되던 회사의 25배는 싼 것이고, 평소 8배이던 회사의 10배는 비싼 것입니다.
+        </li>
+        <li>
+          비교는 <strong>같은 업종</strong>끼리만 뜻이 있습니다. 은행과 게임회사의 PER을 나란히 놓는 것은
+          키와 몸무게를 비교하는 것과 같습니다.
+        </li>
+        <li>
+          값이 <strong>싸 보이는 데는 이유가 있을 수 있습니다.</strong> 정말 저평가된 것인지,
+          앞으로 실적이 나빠질 것을 사람들이 이미 알고 있는 것인지 구분해야 합니다.
+        </li>
+        <li>
+          여기 쓰인 이익·자본은 <strong>지난 사업연도 확정 실적</strong>이고 시가총액은 <strong>기준일 종가</strong>입니다.
+          그 사이에 회사가 크게 달라졌다면 이 배수는 현실을 늦게 반영합니다.
+        </li>
+      </ul>
+    </div>
+  )}
+
+  {!isStock && (
+    <div class="callout warn">
+      <p class="callout-title">그릇에 담긴 값과 붙은 값은 다릅니다</p>
+      <ul>
+        <li>
+          <strong>괴리율이 크게 플러스일 때 사면 웃돈을 주고 사는 것</strong>입니다. 그 웃돈은 대개
+          시간이 지나면 사라지고, 사라질 때 손해는 늦게 산 사람의 몫입니다.
+        </li>
+        <li>
+          거래가 뜸한 종목일수록 괴리가 크게 벌어집니다. <strong>거래량이 적은 ETF·ETN</strong>은
+          제값에 사고팔기 어렵다는 뜻이라 초보자에게는 특히 불리합니다.
+        </li>
+        <li>
+          ETN은 증권사가 <strong>갚기로 약속한 증서</strong>입니다. 담긴 주식을 실제로 들고 있는 ETF와 달리,
+          발행한 증권사가 잘못되면 약속도 함께 흔들립니다.
+        </li>
+      </ul>
+    </div>
+  )}
+
+  <p class="chart-note">
+    {isStock && valuation.fiscalYear ? (
+      <>
+        재무 숫자 출처: <strong>금융감독원 전자공시(DART)</strong> {valuation.fiscalYear}년 사업보고서
+        ({valuation.basis} 기준) · 시가총액·상장주식수는 <strong>한국거래소(KRX)</strong> {formatDate(last.date)} 기준입니다.
+      </>
+    ) : isStock ? (
+      <>
+        시가총액·상장주식수 출처: <strong>한국거래소(KRX)</strong> {formatDate(last.date)} 기준입니다.
+      </>
+    ) : (
+      <>
+        순자산가치·시가총액 출처: <strong>한국거래소(KRX)</strong> {formatDate(last.date)} 기준입니다.
+      </>
+    )}
+  </p>
+</section>

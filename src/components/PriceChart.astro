@@ -202,12 +202,17 @@ const summary =
 </div>
 
 <p class="chart-legend">
-  <span class="lg up">■</span> 오른 날(양봉)
-  <span class="lg down">■</span> 내린 날(음봉)
-  <span class="sep">·</span> 위아래 선은 그날의 <strong>고가·저가</strong>
-  <span class="sep">·</span> <span class="lg ma">━</span> 5일 평균
-  <span class="sep">·</span> <span class="lg ma mid">━</span> 20일 평균
-  <span class="sep">·</span> 아래 막대는 <strong>거래량</strong>
+  {/* 범례 한 칸을 통째로 묶어둔다. 표시와 이름이 줄바꿈으로 갈라지면 그 사이 공백이 사라진다. */}
+  <span class="lg-item"><span class="lg up">■</span> 오른 날(양봉)</span>
+  <span class="lg-item"><span class="lg down">■</span> 내린 날(음봉)</span>
+  <span class="sep">·</span>
+  <span class="lg-item">위아래 선은 그날의 <strong>고가·저가</strong></span>
+  <span class="sep">·</span>
+  <span class="lg-item"><span class="lg ma">━</span> 5일 평균</span>
+  <span class="sep">·</span>
+  <span class="lg-item"><span class="lg ma mid">━</span> 20일 평균</span>
+  <span class="sep">·</span>
+  <span class="lg-item">아래 막대는 <strong>거래량</strong></span>
 </p>
 <p class="chart-note">
   국내는 오르면 빨강, 내리면 파랑입니다. 미국 사이트는 반대로 오르면 초록이니 헷갈리지 마세요.

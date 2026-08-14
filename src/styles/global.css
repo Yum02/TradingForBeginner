@@ -306,20 +306,98 @@ main {
   margin: 0;
 }
 
-.empty-state {
-  margin-top: 2.5rem;
-  padding: 3.5rem 1.5rem;
-  text-align: center;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
+/* 국내 ↔ 미국 비교표 — 순위표와 달리 칸 안에 문장이 들어가므로 줄바꿈을 허용한다 */
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.compare-table thead th {
+  padding: 0.7rem 0.9rem;
   background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.compare-table tbody th,
+.compare-table tbody td {
+  padding: 0.85rem 0.9rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.compare-table tbody th {
+  width: 9rem;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.compare-table tbody td {
+  color: var(--color-text-muted);
+}
+
+.compare-table tbody tr + tr th,
+.compare-table tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
+
+/* 왜 그게 문제인지는 값 아래 한 줄로 — 표 안에 문단을 넣으면 표가 아니게 된다 */
+.compare-table .cmp-note {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--color-faint);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* 지수 소개 카드 */
+
+.index-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.index-card {
+  padding: 1.25rem 1.35rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.index-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.index-card .index-holds {
+  display: inline-block;
+  margin-bottom: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.index-card p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.87rem;
+  line-height: 1.75;
 }
 
 /* Footer */
 
 /*
- * 글이 주인공인 문서 페이지 (소개·개인정보처리방침).
+ * 글이 주인공인 문서 페이지 (소개·개인정보처리방침·미국 주식).
  * 표나 카드가 없어 폭을 제한하지 않으면 한 줄이 1,000px 가까이 늘어나는데,
  * 그러면 눈이 줄 끝에서 다음 줄 첫머리를 찾지 못하고 같은 줄을 다시 읽게 된다.
  */

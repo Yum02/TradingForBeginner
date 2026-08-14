@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "check": "node scripts/check-spacing.ts",
     "collect:domestic": "node --env-file-if-exists=.env scripts/collect-domestic.ts",
     "collect:fundamentals": "node --env-file-if-exists=.env scripts/collect-fundamentals.ts"
   },

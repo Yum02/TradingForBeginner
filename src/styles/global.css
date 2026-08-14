@@ -106,28 +106,10 @@ a {
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   font-weight: 800;
   font-size: 1.1rem;
   color: var(--color-text);
   letter-spacing: -0.01em;
-}
-
-.logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--color-primary);
-  color: #fff;
-  flex: none;
-}
-
-.logo-mark svg {
-  width: 17px;
-  height: 17px;
 }
 
 .main-nav {
@@ -176,7 +158,9 @@ main {
 
 .hero {
   text-align: center;
-  padding-bottom: 0.5rem;
+  /* 히어로 바로 아래에 카드가 온다. 사이에 있던 안내 문단을 걷어냈으므로
+     그 문단이 만들던 간격을 여기서 대신 만든다. */
+  padding-bottom: 3.5rem;
 }
 
 .hero h1 {
@@ -224,70 +208,7 @@ main {
   opacity: 0.94;
 }
 
-.btn-ghost {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn-ghost:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-/* Stat bar */
-
-.stat-bar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--color-border);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin: 3rem 0 0;
-}
-
-.stat {
-  background: var(--color-surface);
-  padding: 1.4rem 1rem;
-  text-align: center;
-}
-
-.stat .num {
-  display: block;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--color-primary);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.stat .label {
-  display: block;
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  margin-top: 0.25rem;
-}
-
 /* Card grid */
-
-.section-heading {
-  margin: 3.5rem 0 1.5rem;
-  text-align: center;
-}
-
-.section-heading h2 {
-  font-size: 1.4rem;
-  margin: 0 0 0.4rem;
-}
-
-.section-heading p {
-  color: var(--color-text-muted);
-  font-size: 0.95rem;
-  margin: 0;
-}
 
 .card-grid {
   display: grid;
@@ -397,6 +318,67 @@ main {
 
 /* Footer */
 
+/*
+ * 글이 주인공인 문서 페이지 (소개·개인정보처리방침).
+ * 표나 카드가 없어 폭을 제한하지 않으면 한 줄이 1,000px 가까이 늘어나는데,
+ * 그러면 눈이 줄 끝에서 다음 줄 첫머리를 찾지 못하고 같은 줄을 다시 읽게 된다.
+ */
+.doc {
+  max-width: 44rem;
+  margin-top: 2.5rem;
+}
+
+.doc h2 {
+  margin: 2.75rem 0 0.8rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.doc > *:first-child {
+  margin-top: 0;
+}
+
+.doc p,
+.doc li {
+  color: var(--color-text-muted);
+  line-height: 1.85;
+}
+
+.doc p {
+  margin: 0 0 1rem;
+}
+
+.doc ul {
+  margin: 0 0 1rem;
+  padding-left: 1.15rem;
+}
+
+.doc li {
+  margin-bottom: 0.55rem;
+}
+
+.doc strong {
+  color: var(--color-text);
+}
+
+.doc a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.doc .principle-box {
+  margin-bottom: 2.5rem;
+}
+
+/* 언제 기준의 문서인지 — 방침 문서에서는 이게 본문만큼 중요하다 */
+.doc-meta {
+  margin-top: 2.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-faint);
+  font-size: 0.82rem;
+}
+
 .site-footer {
   border-top: 1px solid var(--color-border);
   background: var(--color-surface-alt);
@@ -418,7 +400,33 @@ main {
   max-width: 640px;
 }
 
+.site-footer .footer-side {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.site-footer .footer-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.site-footer .footer-nav a {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.site-footer .footer-nav a:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 .site-footer .footer-brand {
+  /* 링크 옆에 그냥 붙여두면 세 번째 링크처럼 보인다. 선으로 갈라놓는다. */
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--color-border);
   color: var(--color-faint);
   font-size: 0.8rem;
   font-weight: 700;
@@ -1817,9 +1825,6 @@ strong.flat {
 @media (max-width: 640px) {
   .hero h1 {
     font-size: 1.9rem;
-  }
-  .stat-bar {
-    grid-template-columns: 1fr;
   }
   .trade-cards {
     grid-template-columns: 1fr;

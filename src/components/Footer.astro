@@ -1,9 +1,27 @@
+---
+/*
+ * 소개·개인정보처리방침 링크는 관례대로 푸터에 둔다. 자주 누르는 곳이 아니라
+ * 상단 메뉴를 차지할 이유가 없고, 방문자도 이런 문서는 맨 아래에서 찾는다.
+ */
+const docLinks = [
+  { href: "/about", label: "사이트 소개" },
+  { href: "/privacy", label: "개인정보처리방침" },
+];
+---
+
 <footer class="site-footer">
   <div class="container">
     <p>
       본 사이트의 콘텐츠는 투자 교육 목적으로 제공되며, 특정 종목에 대한 매수·매도 추천이 아닙니다.
       투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.
     </p>
-    <span class="footer-brand">주식 첫걸음</span>
+    <div class="footer-side">
+      <nav class="footer-nav">
+        {docLinks.map((link) => (
+          <a href={link.href}>{link.label}</a>
+        ))}
+      </nav>
+      <span class="footer-brand">주식의 시작 : 1st Step</span>
+    </div>
   </div>
 </footer>

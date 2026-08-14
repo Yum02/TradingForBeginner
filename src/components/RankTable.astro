@@ -5,6 +5,7 @@ import {
   formatPrice,
   exact,
   hasDetailPage,
+  noDetailReason,
   getSeries,
   type VolumeRow,
 } from "../data/domestic";
@@ -52,7 +53,12 @@ const verdicts = new Map<string, Verdict>(
             {hasDetailPage(row.code) ? (
               <a class="row-link" href={`/domestic/${row.code}`}>{row.name}<span class="chev" aria-hidden="true">›</span></a>
             ) : (
-              row.name
+              <>
+                {row.name}
+                {noDetailReason(row.code) && (
+                  <span class="no-detail">{noDetailReason(row.code)}</span>
+                )}
+              </>
             )}
           </th>
           <td>

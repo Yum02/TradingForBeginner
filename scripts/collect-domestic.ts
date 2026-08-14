@@ -1,16 +1,20 @@
 /**
- * 국내 주식 — 최근 1개월 누적 거래량 TOP10 수집기 (KRX Open API)
+ * 국내 주식 — 최근 1개월 누적 거래량 TOP100 수집기 (KRX Open API)
  *
  *   실행: npm run collect:domestic
- *   결과: src/data/domestic/top10.json  (순위표)      ← 둘 다 git에 커밋됨
+ *   결과: src/data/domestic/ranking.json (순위표)     ← 둘 다 git에 커밋됨
  *         src/data/domestic/daily.json  (종목 상세용 일별 시세)
+ *
+ * 파일 이름에 순위 개수를 넣지 않은 이유는, 몇 위까지 보여줄지는 언제든 바뀔 수 있는
+ * 표시상의 결정이지 파일의 정체가 아니기 때문이다(TOP10에서 TOP100으로 늘리면서
+ * top10.json이라는 이름이 곧바로 거짓말이 됐다).
  *
  * 두 파일은 반드시 같은 실행에서 함께 갱신된다. 순위표에만 있고 시계열에는 없는
  * 종목이 생기면 상세 페이지 링크가 깨지기 때문이다.
  *
  * 수집은 두 단계다. 창(window)이 서로 다르기 때문이다.
- *   1단계  최근 1개월 × 전 종목  → 누적 거래량 순위(TOP10)와 차트용 일별 시세
- *   2단계  그 이전 5개월 × TOP10 종목만 → 기술적 지표 계산용 과거 시세
+ *   1단계  최근 1개월 × 전 종목  → 누적 거래량 순위(TOP100)와 차트용 일별 시세
+ *   2단계  그 이전 5개월 × 순위권 종목만 → 기술적 지표 계산용 과거 시세
  * 순위는 "최근 1개월 거래량"이라는 정의를 지켜야 하므로 1단계 창에서만 집계하고,
  * 60일 이동평균·MACD처럼 긴 과거가 필요한 지표 때문에 시세만 6개월로 늘린다.
  * 2단계는 순위가 정해진 뒤에야 어떤 종목이 필요한지 알 수 있어 순서를 바꿀 수 없다.
@@ -38,14 +42,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const OUT_FILE = path.join(ROOT, "src", "data", "domestic", "top10.json");
+const OUT_FILE = path.join(ROOT, "src", "data", "domestic", "ranking.json");
 const DAILY_FILE = path.join(ROOT, "src", "data", "domestic", "daily.json");
 const CACHE_DIR = path.join(ROOT, ".cache");
 
 const API_BASE = "https://data-dbg.krx.co.kr/svc/apis";
 const CONCURRENCY = 5;
 const MAX_RETRIES = 3;
-const TOP_N = 10;
+/**
+ * 순위표에 몇 종목까지 실을지. 10에서 100으로 늘렸다.
+ *
+ * 늘려도 KRX 요청 수는 그대로다. KRX에는 "종목 하나의 기간 시세"를 주는 창구가 없어
+ * 어차피 하루씩 전 종목을 통째로 받고 있고, 그중 몇 개를 남기느냐만 달라지기 때문이다.
+ * 실제로 늘어나는 것은 daily.json의 크기와 상세 페이지 수(약 200장)다.
+ */
+const TOP_N = 100;
 /** 최신 영업일을 찾을 때 오늘부터 거꾸로 최대 며칠까지 훑을지 (연휴 대비) */
 const LOOKBACK_DAYS = 14;
 
@@ -66,6 +77,14 @@ const MAX_TRADING_DAYS = 25;
 /** 6개월이면 영업일이 대략 118~125일이다. 상·하한을 넉넉히 잡되 벗어나면 실패시킨다. */
 const MIN_HISTORY_DAYS = 100;
 const MAX_HISTORY_DAYS = 135;
+/** 상세 페이지를 만들려면 최소 며칠치 시세가 있어야 하는지 — '최근 1주일' 표에 5일이 필요하다. */
+const MIN_DETAIL_BARS = 5;
+/**
+ * 시세가 모자라 상세 페이지를 접는 종목이 이 비율을 넘으면 수집 자체가 잘못된 것으로 본다.
+ * 상장 직후 종목이 순위에 몇 개 드는 것은 정상이지만, 열에 하나씩 빠진다면 그건 신규
+ * 상장이 아니라 과거 시세 수집이 깨진 것이다.
+ */
+const MAX_NO_DETAIL_RATIO = 0.1;
 
 type Market = "KOSPI" | "KOSDAQ";
 type Kind = "주식" | "ETF" | "ETN";
@@ -154,7 +173,7 @@ interface StockSeries {
   days: DayBar[];
 }
 
-interface Top10Row {
+interface RankRow {
   rank: number;
   code: string;
   name: string;
@@ -355,11 +374,11 @@ async function readHistCache(from: string, to: string, codes: string[]): Promise
 }
 
 /**
- * TOP10 종목의 과거(1단계 창 이전) 일별 시세를 모은다.
+ * 순위권 종목의 과거(1단계 창 이전) 일별 시세를 모은다.
  *
  * KRX Open API에는 "종목 하나의 기간 시세"를 주는 창구가 없고 날짜별 전 종목만 있어서,
  * 하루씩 전 종목을 받아 필요한 종목만 골라내는 수밖에 없다. 대신 어떤 엔드포인트가
- * 필요한지는 이미 알고 있으므로(TOP10에 코스닥 종목이 없으면 코스닥은 아예 안 부른다)
+ * 필요한지는 이미 알고 있으므로(순위권에 코스닥 종목이 없으면 코스닥은 아예 안 부른다)
  * 그만큼 요청 수를 줄인다.
  */
 async function fetchHistory(
@@ -418,15 +437,22 @@ async function fetchHistory(
   return cache;
 }
 
-/** 임시 파일에 쓰고 rename — 도중에 죽어도 기존 파일이 반쯤 덮여 깨지지 않는다. */
-async function writeJson(file: string, data: unknown): Promise<void> {
+/**
+ * 임시 파일에 쓰고 rename — 도중에 죽어도 기존 파일이 반쯤 덮여 깨지지 않는다.
+ *
+ * pretty를 끄면 줄바꿈 없이 한 줄로 쓴다. daily.json은 종목이 100위까지 늘면서
+ * 캔들이 2만 개를 넘어가는데, 들여쓰기를 넣으면 파일이 두 배 이상 부풀고 저장소에
+ * 그대로 쌓인다. 어차피 통째로 다시 만들어지는 생성물이라 줄 단위 diff가 의미 없어서
+ * 사람이 읽을 여지를 포기하고 크기를 택했다. 순위표처럼 작은 파일은 그대로 둔다.
+ */
+async function writeJson(file: string, data: unknown, pretty = true): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp`;
-  await writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  await writeFile(tmp, `${JSON.stringify(data, null, pretty ? 2 : undefined)}\n`, "utf8");
   await rename(tmp, file);
 }
 
-function toTop10(rows: Aggregate[]): Top10Row[] {
+function toRanking(rows: Aggregate[]): RankRow[] {
   return rows
     .slice()
     .sort((a, b) => b.volume - a.volume)
@@ -533,8 +559,8 @@ async function main(): Promise<void> {
   // 3. 집계
   const aggregates = Object.values(cache.rows);
   const sortedDates = cache.dates;
-  const stocks = toTop10(aggregates.filter((row) => row.kind === "주식"));
-  const all = toTop10(aggregates);
+  const stocks = toRanking(aggregates.filter((row) => row.kind === "주식"));
+  const all = toRanking(aggregates);
 
   // 4. 검증 — 여기까지 통과해야만 기존 JSON을 교체한다.
   assert(sortedDates.length >= MIN_TRADING_DAYS, `영업일이 너무 적습니다 (${sortedDates.length}일).`);
@@ -567,7 +593,7 @@ async function main(): Promise<void> {
     assert(cache.rows[code] !== undefined, `${code}의 집계 결과를 찾지 못했습니다.`);
   }
 
-  // 5-1. 2단계 — 기술적 지표에 필요한 과거 5개월치를 TOP10 종목만 따로 받아 앞에 붙인다.
+  // 5-1. 2단계 — 기술적 지표에 필요한 과거 5개월치를 순위권 종목만 따로 받아 앞에 붙인다.
   console.log(`\n기술적 지표용 과거 시세 (${detailCodes.length}종목)`);
   const hist = await fetchHistory(
     histFrom,
@@ -583,13 +609,23 @@ async function main(): Promise<void> {
   );
 
   const seriesOut: Record<string, StockSeries> = {};
+  /** 순위에는 올랐지만 상세 페이지를 만들지 않은 종목 — 화면에서 이유를 밝히는 데 쓴다 */
+  const noDetail: Record<string, string> = {};
   for (const code of detailCodes) {
     const agg = cache.rows[code];
     // 병렬로 모았기 때문에 날짜가 뒤섞여 있다. 차트가 시간순으로 그려지도록 정렬한다.
     const days = [...(hist.series[code] ?? []), ...(cache.series[code] ?? [])]
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date));
-    assert(days.length >= 5, `${agg.name}의 일별 시세가 ${days.length}일뿐입니다 (최근 1주일 표에 5일이 필요).`);
+
+    // 상장 직후 종목은 첫날 거래가 몰려 한 달 누적 거래량만으로도 순위에 든다. 그런데
+    // 시세가 며칠뿐이라 차트도 지표도 그릴 것이 없다. 순위에서 빼면 "거래량 순위"라는
+    // 정의가 거짓이 되므로 표에는 남기고, 상세 페이지만 만들지 않는다.
+    if (days.length < MIN_DETAIL_BARS) {
+      noDetail[code] = `상장한 지 얼마 되지 않아 시세가 ${days.length}영업일치뿐입니다.`;
+      continue;
+    }
+
     for (let i = 1; i < days.length; i++) {
       assert(days[i - 1].date < days[i].date, `${agg.name}의 일별 시세에 날짜가 중복됐습니다.`);
     }
@@ -609,13 +645,20 @@ async function main(): Promise<void> {
     };
   }
 
+  const skipped = Object.keys(noDetail).length;
+  assert(
+    skipped <= detailCodes.length * MAX_NO_DETAIL_RATIO,
+    `${detailCodes.length}종목 중 ${skipped}종목의 시세가 ${MIN_DETAIL_BARS}일 미만입니다. ` +
+      "과거 시세 수집이 제대로 됐는지 확인하세요.",
+  );
+
   const generatedAt = kstNowIso();
   const period = {
     from: sortedDates[0],
     to: sortedDates[sortedDates.length - 1],
     tradingDays: sortedDates.length,
   };
-  const payload = { generatedAt, window: period, stocks, all };
+  const payload = { generatedAt, window: period, stocks, all, noDetail };
   const dailyPayload = {
     generatedAt,
     // window는 차트·순위와 같은 최근 1개월. history는 지표 계산에 쓰는 6개월 전체.
@@ -632,19 +675,34 @@ async function main(): Promise<void> {
   // 6. 원자적 교체 — 중간에 죽어도 기존 파일이 깨지지 않는다. 두 파일은 반드시
   //    함께 갱신한다. 한쪽만 새것이면 상세 페이지 링크가 깨진다.
   await writeJson(OUT_FILE, payload);
-  await writeJson(DAILY_FILE, dailyPayload);
+  await writeJson(DAILY_FILE, dailyPayload, false);
 
   const 억 = (n: number) => `${(n / 1e8).toFixed(1)}억`;
+  // 100줄씩 두 벌을 쏟아내면 정작 봐야 할 요약이 위로 밀려 올라간다. 눈으로 확인하는
+  // 용도이므로 앞쪽 몇 줄만 찍고 나머지는 개수로 갈음한다.
+  const PREVIEW = 10;
+  const preview = (title: string, list: RankRow[]) => {
+    console.log(`\n${title} (${list.length}종목 중 ${Math.min(PREVIEW, list.length)}위까지)`);
+    for (const r of list.slice(0, PREVIEW)) {
+      console.log(`  ${String(r.rank).padStart(3)} ${r.name.padEnd(20)} ${억(r.volume).padStart(10)}주  ${억(r.value).padStart(12)}원`);
+    }
+    const last = list[list.length - 1];
+    if (list.length > PREVIEW) console.log(`  ...  ${String(last.rank).padStart(3)}위 ${last.name} ${억(last.volume)}주`);
+  };
   console.log(`\n기간: ${payload.window.from} ~ ${payload.window.to} (${payload.window.tradingDays}영업일)`);
   console.log(`집계 종목: ${aggregates.length}`);
-  console.log("\n개별 종목 TOP10");
-  for (const r of stocks) console.log(`  ${String(r.rank).padStart(2)} ${r.name.padEnd(20)} ${억(r.volume).padStart(10)}주  ${억(r.value).padStart(12)}원`);
-  console.log("\nETF·ETN 포함 TOP10");
-  for (const r of all) console.log(`  ${String(r.rank).padStart(2)} ${r.name.padEnd(20)} ${억(r.volume).padStart(10)}주  ${억(r.value).padStart(12)}원`);
+  preview("개별 종목 순위", stocks);
+  preview("ETF·ETN 포함 순위", all);
   const barCount = Object.values(seriesOut).reduce((sum, s) => sum + s.days.length, 0);
   const shortest = Object.values(seriesOut).reduce((min, s) => Math.min(min, s.days.length), Infinity);
   console.log(`\n→ ${path.relative(ROOT, OUT_FILE)} 갱신 완료`);
-  console.log(`→ ${path.relative(ROOT, DAILY_FILE)} 갱신 완료 (${detailCodes.length}종목 · 일별 시세 ${barCount}건)`);
+  console.log(
+    `→ ${path.relative(ROOT, DAILY_FILE)} 갱신 완료` +
+      ` (${Object.keys(seriesOut).length}/${detailCodes.length}종목 · 일별 시세 ${barCount}건)`,
+  );
+  for (const [code, reason] of Object.entries(noDetail)) {
+    console.log(`   상세 없음 ${code} ${cache.rows[code].name}: ${reason}`);
+  }
   console.log(
     `   지표용 과거: ${dailyPayload.history.from} ~ ${dailyPayload.history.to} (${historyDates.length}영업일)` +
       ` · 가장 짧은 종목 ${shortest}일`,
@@ -654,6 +712,6 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   console.error(`\n수집 실패: ${err instanceof Error ? err.message : String(err)}`);
-  console.error("기존 top10.json·daily.json은 그대로 두었습니다.");
+  console.error("기존 ranking.json·daily.json은 그대로 두었습니다.");
   process.exitCode = 1;
 });

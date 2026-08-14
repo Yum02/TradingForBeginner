@@ -1,4 +1,4 @@
-import raw from "./top10.json";
+import raw from "./ranking.json";
 import rawDaily from "./daily.json";
 
 export type Market = "KOSPI" | "KOSDAQ";
@@ -19,13 +19,18 @@ export interface VolumeRow {
   lastClose: number;
 }
 
-export interface DomesticTop10 {
+export interface DomesticRanking {
   generatedAt: string;
   window: { from: string; to: string; tradingDays: number };
-  /** ETF·ETN을 제외한 개별 종목 TOP10 */
+  /** ETF·ETN을 제외한 개별 종목 TOP100 */
   stocks: VolumeRow[];
-  /** ETF·ETN을 포함한 전체 TOP10 */
+  /** ETF·ETN을 포함한 전체 TOP100 */
   all: VolumeRow[];
+  /**
+   * 순위에는 올랐지만 상세 페이지가 없는 종목 → 그 이유.
+   * 상장 직후라 시세가 며칠뿐인 종목이 여기 들어온다.
+   */
+  noDetail: Record<string, string>;
 }
 
 /** 종목 상세 페이지용 하루치 시세 — 캔들 하나에 대응한다. */
@@ -79,11 +84,11 @@ export interface DomesticDaily {
 }
 
 /**
- * top10.json·daily.json은 `npm run collect:domestic`이 만드는 생성물이다. 손으로 고치지 않는다.
+ * ranking.json·daily.json은 `npm run collect:domestic`이 만드는 생성물이다. 손으로 고치지 않는다.
  * JSON을 import하면 TypeScript가 문자열 리터럴을 넓은 string으로 추론하기 때문에
  * market·kind 유니온을 붙이려면 한 번 거쳐 캐스팅해야 한다.
  */
-export const top10 = raw as unknown as DomesticTop10;
+export const ranking = raw as unknown as DomesticRanking;
 export const daily = rawDaily as unknown as DomesticDaily;
 
 /**
@@ -92,6 +97,14 @@ export const daily = rawDaily as unknown as DomesticDaily;
  */
 export function hasDetailPage(code: string): boolean {
   return code in daily.series;
+}
+
+/**
+ * 상세 페이지가 없는 종목이라면 그 이유. 링크가 없는 줄을 그냥 두면 "왜 이것만
+ * 눌러지지 않지" 하고 고장으로 읽히므로, 표에 이유를 적어준다.
+ */
+export function noDetailReason(code: string): string | null {
+  return ranking.noDetail[code] ?? null;
 }
 
 export function getSeries(code: string): StockSeries | undefined {

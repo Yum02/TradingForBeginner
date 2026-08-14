@@ -205,6 +205,22 @@ async function loadCorpCodes(): Promise<Map<string, { corpCode: string; name: st
   return map;
 }
 
+/**
+ * 우선주라면 같은 회사 보통주의 종목코드를 돌려준다.
+ *
+ * 우선주는 회사가 아니라 '같은 회사의 다른 주식'이라 DART 고유번호 대응표에 따로 실리지
+ * 않는다. 국내 종목코드는 보통주가 0으로 끝나고(005930 삼성전자) 우선주는 5·7 같은 다른
+ * 숫자로 끝나서(005935 삼성전자우) 끝자리로 구분할 수 있다.
+ *
+ * 알아내도 그 회사의 재무 숫자를 우선주에 그대로 붙이지는 않는다. 우선주는 주식 수도
+ * 주가도 보통주와 달라서, 회사 전체 순이익을 우선주 시가총액으로 나누면 뜻이 없는
+ * PER이 나온다. 여기서는 "왜 지표가 없는지"를 제대로 설명하는 데에만 쓴다.
+ */
+function preferredParent(code: string): string | null {
+  if (!/^\d{6}$/.test(code) || code.endsWith("0")) return null;
+  return `${code.slice(0, 5)}0`;
+}
+
 // ── 재무제표 ────────────────────────────────────────────────────────────────
 
 async function fetchAccounts(corpCode: string, year: string): Promise<DartResponse> {
@@ -334,7 +350,12 @@ async function main(): Promise<void> {
   await mapLimit(targets, CONCURRENCY, async (target) => {
     const mapped = corpCodes.get(target.code);
     if (!mapped) {
-      missing[target.code] = "DART 고유번호 대응표에 없는 종목입니다.";
+      const parent = preferredParent(target.code);
+      const parentName = parent ? corpCodes.get(parent)?.name : undefined;
+      missing[target.code] = parentName
+        ? `우선주라서 재무제표가 따로 없습니다. 같은 회사인 보통주 ${parentName}(${parent}) 이름으로 공시되는데, ` +
+          "우선주는 주식 수와 주가가 보통주와 달라 그 숫자를 그대로 나눠 쓰면 뜻이 없는 값이 나옵니다."
+        : "DART 고유번호 대응표에 없는 종목입니다.";
       return;
     }
 
@@ -361,7 +382,9 @@ async function main(): Promise<void> {
         "은행·보험·증권 등 금융회사는 계정 이름이 달라 주요계정 API로 잡히지 않습니다.";
       return;
     }
-    missing[target.code] = `최근 ${YEAR_LOOKBACK}개 사업연도에 제출된 사업보고서를 찾지 못했습니다.`;
+    missing[target.code] =
+      `최근 ${YEAR_LOOKBACK}개 사업연도에 제출된 사업보고서가 없습니다. ` +
+      "상장한 지 얼마 되지 않은 회사는 아직 낼 사업보고서가 없어 여기에 해당합니다.";
   });
 
   // 4. 검증 — 절반도 못 받았다면 뭔가 잘못된 것이므로 기존 파일을 지키고 실패시킨다.
@@ -385,11 +408,17 @@ async function main(): Promise<void> {
   );
   for (const company of Object.values(companies)) {
     assert(company.history.length === 3, `${company.name}의 3개년 자료가 어긋납니다.`);
-    assert(
-      company.equity === null || company.equity > 0,
-      `${company.name}의 자본총계가 0 이하입니다 (자본잠식이면 PBR을 쓸 수 없습니다).`,
-    );
   }
+
+  // 자본총계가 0 이하인 회사(완전자본잠식)는 실수가 아니라 실제로 있는 상태다.
+  // 수집을 멈추지 않고 그대로 싣되, PBR을 계산하지 않는 것은 화면 쪽에서 처리한다.
+  // 다만 이런 회사가 무더기로 나온다면 그건 계정을 잘못 읽고 있다는 뜻이다.
+  const impaired = Object.values(companies).filter((c) => c.equity !== null && c.equity <= 0);
+  assert(
+    impaired.length * 5 <= got,
+    `자본총계가 0 이하인 회사가 ${impaired.length}곳입니다. 계정을 잘못 읽고 있는지 확인하세요.`,
+  );
+  for (const c of impaired) console.log(`  자본잠식 ${c.name}: 자본총계 ${(c.equity! / 1e8).toFixed(0)}억`);
 
   const payload: Payload = {
     generatedAt: kstNowIso(),

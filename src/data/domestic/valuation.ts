@@ -168,8 +168,22 @@ function pbrMetric(series: StockSeries, company: Company | undefined): Metric {
     "높게 나옵니다. 업종이 다르면 아예 비교가 되지 않습니다.";
   const bps = company?.equity != null && series.listedShares > 0 ? company.equity / series.listedShares : null;
 
-  if (!company || company.equity == null || company.equity <= 0) {
+  if (!company || company.equity == null) {
     return { key: "pbr", label: "PBR (주가순자산비율)", value: null, detail: "자본총계 자료가 없습니다.", meaning };
+  }
+  // 자본총계가 0 이하 = 완전자본잠식. 빚이 자산보다 많아 주주 몫이 남지 않는 상태다.
+  // 0이나 음수로 나누면 숫자는 나오지만 뜻이 없으므로 계산하지 않고 상황을 알린다.
+  if (company.equity <= 0) {
+    return {
+      key: "pbr",
+      label: "PBR (주가순자산비율)",
+      value: null,
+      detail: `${company.fiscalYear}년 자본총계가 ${formatMoney(company.equity)}원으로 0 이하입니다 (자본잠식).`,
+      meaning:
+        meaning +
+        " 이 회사는 빚이 자산보다 많아 주주에게 돌아올 몫이 장부상 남아 있지 않습니다. " +
+        "나눌 순자산이 없으니 PBR도 나오지 않습니다. 상장폐지 심사 대상이 될 수 있는 상태라 특히 조심해야 합니다.",
+    };
   }
 
   const pbr = series.marketCap / company.equity;

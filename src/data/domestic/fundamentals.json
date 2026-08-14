@@ -1,6 +1,267 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-08-14T11:29:14+09:00",
   "source": "금융감독원 전자공시시스템(DART) OpenAPI · 사업보고서 주요계정",
-  "companies": {},
+  "companies": {
+    "413630": {
+      "code": "413630",
+      "name": "씨피시스템",
+      "corpCode": "01601222",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 2002088660,
+      "equity": 43520108678,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": 5172598633,
+          "equity": 37021633658
+        },
+        {
+          "year": "2024",
+          "netIncome": -12093742428,
+          "equity": 44699154221
+        },
+        {
+          "year": "2025",
+          "netIncome": 2002088660,
+          "equity": 43520108678
+        }
+      ]
+    },
+    "475150": {
+      "code": "475150",
+      "name": "SK이터닉스",
+      "corpCode": "01817081",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 30721781368,
+      "equity": 273040531600,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": null,
+          "equity": null
+        },
+        {
+          "year": "2024",
+          "netIncome": 22380995585,
+          "equity": 241972753239
+        },
+        {
+          "year": "2025",
+          "netIncome": 30721781368,
+          "equity": 273040531600
+        }
+      ]
+    },
+    "005930": {
+      "code": "005930",
+      "name": "삼성전자",
+      "corpCode": "00126380",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 45206805000000,
+      "equity": 436320337000000,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": 15487100000000,
+          "equity": 363677865000000
+        },
+        {
+          "year": "2024",
+          "netIncome": 34451351000000,
+          "equity": 402192070000000
+        },
+        {
+          "year": "2025",
+          "netIncome": 45206805000000,
+          "equity": 436320337000000
+        }
+      ]
+    },
+    "006340": {
+      "code": "006340",
+      "name": "대원전선",
+      "corpCode": "00260392",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 12916455490,
+      "equity": 152048393291,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": 9612692059,
+          "equity": 100324043905
+        },
+        {
+          "year": "2024",
+          "netIncome": 6794390393,
+          "equity": 113845590709
+        },
+        {
+          "year": "2025",
+          "netIncome": 12916455490,
+          "equity": 152048393291
+        }
+      ]
+    },
+    "003280": {
+      "code": "003280",
+      "name": "흥아해운",
+      "corpCode": "00167208",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 30324384354,
+      "equity": 259908884187,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": 34733504205,
+          "equity": 170714205597
+        },
+        {
+          "year": "2024",
+          "netIncome": 39961399082,
+          "equity": 234039195529
+        },
+        {
+          "year": "2025",
+          "netIncome": 30324384354,
+          "equity": 259908884187
+        }
+      ]
+    },
+    "069540": {
+      "code": "069540",
+      "name": "빛과전자",
+      "corpCode": "00367482",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": -19651078587,
+      "equity": 58876681838,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": -19623249295,
+          "equity": 49297428600
+        },
+        {
+          "year": "2024",
+          "netIncome": -18580542649,
+          "equity": 62503170819
+        },
+        {
+          "year": "2025",
+          "netIncome": -19651078587,
+          "equity": 58876681838
+        }
+      ]
+    },
+    "067290": {
+      "code": "067290",
+      "name": "JW신약",
+      "corpCode": "00110431",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 15656730846,
+      "equity": 40727803290,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": -37402206978,
+          "equity": 16444347344
+        },
+        {
+          "year": "2024",
+          "netIncome": 5076982440,
+          "equity": 26569281642
+        },
+        {
+          "year": "2025",
+          "netIncome": 15656730846,
+          "equity": 40727803290
+        }
+      ]
+    },
+    "010170": {
+      "code": "010170",
+      "name": "대한광통신",
+      "corpCode": "00113261",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": -27972927775,
+      "equity": 66651648061,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": -29456645326,
+          "equity": 76021262071
+        },
+        {
+          "year": "2024",
+          "netIncome": -56038066436,
+          "equity": 40826257677
+        },
+        {
+          "year": "2025",
+          "netIncome": -27972927775,
+          "equity": 66651648061
+        }
+      ]
+    },
+    "002700": {
+      "code": "002700",
+      "name": "신일전자",
+      "corpCode": "00173698",
+      "fiscalYear": "2025",
+      "basis": "별도",
+      "netIncome": 4206905611,
+      "equity": 83159456000,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": 1056841415,
+          "equity": 82244765768
+        },
+        {
+          "year": "2024",
+          "netIncome": 1434794585,
+          "equity": 80640138413
+        },
+        {
+          "year": "2025",
+          "netIncome": 4206905611,
+          "equity": 83159456000
+        }
+      ]
+    },
+    "073240": {
+      "code": "073240",
+      "name": "금호타이어",
+      "corpCode": "00481454",
+      "fiscalYear": "2025",
+      "basis": "연결",
+      "netIncome": 376772981397,
+      "equity": 2238707317451,
+      "history": [
+        {
+          "year": "2023",
+          "netIncome": 171848469734,
+          "equity": 1399056998591
+        },
+        {
+          "year": "2024",
+          "netIncome": 351617959521,
+          "equity": 1904822013747
+        },
+        {
+          "year": "2025",
+          "netIncome": 376772981397,
+          "equity": 2238707317451
+        }
+      ]
+    }
+  },
   "missing": {}
 }

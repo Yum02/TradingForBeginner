@@ -225,12 +225,23 @@ async function fetchAccounts(corpCode: string, year: string): Promise<DartRespon
 }
 
 /**
+ * 계정 이름 표기 차이를 지운다. 같은 "당기순이익"이라도 회사마다 적는 방식이 달라서
+ * 삼성전자는 "당기순이익(손실)", 다른 곳은 "당기순이익", 또 다른 곳은 공백을 끼워
+ * "당기 순이익"으로 낸다. 괄호 안 설명과 공백을 떼고 비교해야 같은 계정으로 잡힌다.
+ * ("법인세차감전 순이익"은 공백을 떼도 "당기순이익"과 달라서 섞이지 않는다.)
+ */
+function normalizeAccount(name: string | undefined): string {
+  return (name ?? "").replace(/\([^)]*\)/g, "").replace(/\s+/g, "");
+}
+
+/**
  * 같은 계정이 연결(CFS)·별도(OFS) 두 벌로 온다. 연결을 먼저 쓰는 이유는 자회사까지
  * 합친 그림이 그 회사의 실제 규모에 가깝기 때문이고, 연결 재무제표를 만들지 않는
  * 회사(자회사가 없는 경우)만 별도로 떨어진다.
  */
 function pick(list: DartAccount[], name: string, section: string): { row: DartAccount; basis: "연결" | "별도" } | null {
-  const matches = list.filter((row) => row.account_nm?.trim() === name && row.sj_div === section);
+  const wanted = normalizeAccount(name);
+  const matches = list.filter((row) => normalizeAccount(row.account_nm) === wanted && row.sj_div === section);
   const consolidated = matches.find((row) => row.fs_div === "CFS");
   if (consolidated) return { row: consolidated, basis: "연결" };
   const separate = matches.find((row) => row.fs_div === "OFS");
@@ -358,6 +369,19 @@ async function main(): Promise<void> {
   assert(
     got * 2 >= targets.length,
     `${targets.length}종목 중 ${got}종목만 받았습니다. 인증키와 DART 응답을 확인하세요.`,
+  );
+
+  // 계정 이름이 어긋나면 '자료는 받았는데 숫자만 전부 빈' 상태가 조용히 만들어진다.
+  // 실제로 "당기순이익(손실)" 표기를 놓쳐 한 번 겪은 일이라, 값이 채워졌는지 따로 본다.
+  const withIncome = Object.values(companies).filter((c) => c.netIncome !== null).length;
+  const withEquity = Object.values(companies).filter((c) => c.equity !== null).length;
+  assert(
+    withIncome * 2 >= got,
+    `${got}종목 중 당기순이익이 ${withIncome}종목뿐입니다. DART 계정 이름 표기가 바뀌었는지 확인하세요.`,
+  );
+  assert(
+    withEquity * 2 >= got,
+    `${got}종목 중 자본총계가 ${withEquity}종목뿐입니다. DART 계정 이름 표기가 바뀌었는지 확인하세요.`,
   );
   for (const company of Object.values(companies)) {
     assert(company.history.length === 3, `${company.name}의 3개년 자료가 어긋납니다.`);

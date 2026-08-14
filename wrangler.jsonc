@@ -2,6 +2,9 @@
   "name": "tradingforbeginner",
   "compatibility_date": "2025-09-01",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    // 없는 주소로 들어오면 dist/404.html을 보여준다. 이 줄이 없으면 파일이 있어도
+    // 쓰지 않고 서버 기본 오류 화면이 나간다(기본값이 "none"이다).
+    "not_found_handling": "404-page"
   }
 }

@@ -1,0 +1,54 @@
+---
+/*
+ * 없는 주소로 들어왔을 때 보여주는 화면.
+ *
+ * 정적 호스팅은 이 파일이 없으면 서버가 만든 밋밋한 오류 문구를 그대로 내보낸다.
+ * 방문자 입장에서는 사이트가 고장 난 것처럼 보이고, 돌아갈 길이 없어 그냥 나가버린다.
+ * 그래서 오류를 알리는 데서 끝내지 않고 갈 만한 곳을 바로 옆에 놓는다.
+ */
+import Layout from "../layouts/Layout.astro";
+import { glossaryCategories } from "../data/glossary";
+import { ranking } from "../data/domestic";
+
+const termCount = glossaryCategories.reduce((sum, cat) => sum + cat.terms.length, 0);
+
+const destinations = [
+  {
+    href: "/concepts",
+    title: "기본 개념",
+    desc: `주식 기초 용어 ${termCount}개를 ${glossaryCategories.length}개 주제로 정리했습니다.`,
+  },
+  {
+    href: "/domestic",
+    title: "국내 주식",
+    desc: `최근 1개월 거래량 상위 ${ranking.stocks.length}종목과 종목별 상세 화면입니다.`,
+  },
+  {
+    href: "/about",
+    title: "사이트 소개",
+    desc: "이곳이 무엇을 하는 곳이고 숫자가 어디서 오는지 밝혀둔 글입니다.",
+  },
+];
+---
+
+<Layout
+  title="페이지를 찾을 수 없습니다"
+  description="요청하신 주소에 해당하는 페이지가 없습니다. 기본 개념과 국내 주식 화면으로 이동할 수 있습니다."
+>
+  <div class="page-header">
+    <h1>페이지를 찾을 수 없습니다</h1>
+    <p>
+      주소가 잘못됐거나, 있던 페이지가 사라진 것일 수 있습니다. 종목 상세 화면은 순위에 들었던
+      종목만 만들기 때문에, 순위가 바뀌면서 없어졌을 수도 있습니다.
+    </p>
+  </div>
+
+  <div class="card-grid">
+    {destinations.map((d) => (
+      <a class="card" href={d.href}>
+        <h3>{d.title}</h3>
+        <p>{d.desc}</p>
+      </a>
+    ))}
+  </div>
+</Layout>
